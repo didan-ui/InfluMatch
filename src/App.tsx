@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { User } from "./types";
 import LoginPage from "./components/LoginPage";
-import RegisterPageNew from "./components/RegisterPageNew";
+import RegisterPage from "./components/RegisterPage";
 import WelcomePage from "./components/WelcomePage";
 import UmkmDashboard from "./components/UmkmDashboard";
 import InfluencerDashboard from "./components/InfluencerDashboard";
-import AdminDashboardNew from "./components/AdminDashboardNew";
+import AdminDashboard from "./components/AdminDashboard";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
@@ -84,9 +84,10 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="flex-1"
           >
-            <RegisterPageNew
+            <RegisterPage
               onRegisterSuccess={handleRegisterSuccess}
               onNavigateToLogin={() => setScreen("login")}
+              onNavigateToWelcome={() => setScreen("welcome")}
             />
           </motion.div>
         )}
@@ -109,7 +110,7 @@ export default function App() {
             )}
 
             {currentUser.role === "admin" && (
-              <AdminDashboardNew user={currentUser} onLogout={handleLogout} />
+              <AdminDashboard currentUser={currentUser} />
             )}
           </motion.div>
         )}

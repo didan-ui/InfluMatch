@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { User, UserRole } from "../types";
-import { saveDbUser, addDbLog, getDbUsers } from "../utils";
+import { UserRole } from "../types";
+import { useAuth } from "../services/hooks";
 import { motion } from "motion/react";
 import { Users, Store, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -30,6 +30,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
   const [city, setCity] = useState("Malang");
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const { register, loading } = useAuth();
 
   const handleNicheToggle = (tag: string) => {
     if (niche.includes(tag)) {
@@ -39,7 +40,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotification(null);
 
@@ -58,49 +59,30 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
       return;
     }
 
-    const users = getDbUsers();
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      setNotification({ type: 'error', text: "Email ini sudah terdaftar. Silakan gunakan email lain." });
-      return;
+    try {
+      const payload = {
+        email,
+        password,
+        name,
+        role,
+        brandName: role === "umkm" ? brandName : undefined,
+        brandCategory: role === "umkm" ? brandCategory : undefined,
+        handle: role === "influencer" ? (handle.startsWith("@") ? handle : `@${handle}`) : undefined,
+        city,
+      };
+
+      await register(payload);
+
+      setNotification({ type: 'success', text: "Registrasi berhasil! Mengalihkan ke laman login..." });
+      setTimeout(() => {
+        onRegisterSuccess();
+      }, 2000);
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        text: err.message || "Registrasi gagal. Silakan coba lagi.",
+      });
     }
-
-    // Build the user object
-    const newUser: User = {
-      id: `${role}-${Date.now()}`,
-      email,
-      name,
-      role,
-      city,
-      isApproved: true, // Auto approved for demo flow ease, but admin can inspect
-      avatarUrl: name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
-    };
-
-    if (role === "umkm") {
-      newUser.brandName = brandName;
-      newUser.brandCategory = brandCategory;
-    } else if (role === "influencer") {
-      newUser.handle = handle.startsWith("@") ? handle : `@${handle}`;
-      newUser.followers = followers;
-      // parse followersNum
-      let num = 5000;
-      if (followers.includes("K")) {
-        num = parseFloat(followers.replace("K", "")) * 1000;
-      }
-      newUser.followersNum = num;
-      newUser.niche = niche;
-      newUser.pricePerPost = pricePerPost;
-      newUser.engagement = (4 + Math.random() * 6).toFixed(1) + "%";
-      newUser.rating = parseFloat((4.5 + Math.random() * 0.5).toFixed(1));
-    }
-
-    // Save in storage
-    saveDbUser(newUser);
-    addDbLog(newUser.name, "Registrasi User", `${newUser.name} melakukan registrasi untuk tipe ${role.toUpperCase()}`, role);
-
-    setNotification({ type: 'success', text: "Registrasi berhasil! Mengalihkan ke laman login..." });
-    setTimeout(() => {
-      onRegisterSuccess();
-    }, 2000);
   };
 
   return (
@@ -302,7 +284,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                 key="influencer-fields"
                 className="space-y-4"
               >
-                <h3 className="font-serif text-lg font-bold text-brand-text font-serif">Kanal Media Sosial & Tarif</h3>
+                <h3 className="font-serif text-lg font-bold text-brand-text">Kanal Media Sosial & Tarif</h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
@@ -381,9 +363,10 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
             <div className="pt-4">
               <button
                 type="submit"
-                className="w-full flex justify-center items-center gap-2 py-4 px-4 rounded-2xl bg-brand-text text-brand-white font-bold hover:opacity-90 active:scale-[0.99] transition-all text-sm shadow-md cursor-pointer"
+                disabled={loading}
+                className="w-full flex justify-center items-center gap-2 py-4 px-4 rounded-2xl bg-brand-text text-brand-white font-bold hover:opacity-90 active:scale-[0.99] transition-all text-sm shadow-md cursor-pointer disabled:opacity-50"
               >
-                Selesaikan Pendaftaran <ArrowRight className="w-4 h-4" />
+                {loading ? "Memproses..." : "Selesaikan Pendaftaran"} <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </form>
