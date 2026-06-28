@@ -199,9 +199,12 @@ export const getDbCampaigns = async (): Promise<Campaign[]> => {
   return (response.campaigns || []).map(toCampaign);
 };
 
-export const saveDbCampaign = async (campaign: Campaign): Promise<Campaign> => {
+export const saveDbCampaign = async (campaign: Partial<Campaign>): Promise<Campaign> => {
   const payload = toSnakeCampaign(campaign);
-  const isNewCampaign = typeof campaign.id === "string" && campaign.id.startsWith("camp-");
+  const isNewCampaign = !campaign.id || (typeof campaign.id === "string" && campaign.id.startsWith("camp-"));
+  if (isNewCampaign) {
+    delete (payload as any).id;
+  }
   const response = await requestJson(isNewCampaign ? "/campaigns" : `/campaigns/${campaign.id}`, {
     method: isNewCampaign ? "POST" : "PUT",
     body: JSON.stringify(payload),

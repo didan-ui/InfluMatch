@@ -21,10 +21,11 @@ interface InfluencerDashboardProps {
 }
 
 export default function InfluencerDashboard({ currentUser, onLogout }: InfluencerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"invites" | "active" | "escrow" | "settings">("invites");
+  const [activeTab, setActiveTab] = useState<"invites" | "active" | "browse" | "escrow" | "settings">("invites");
   
   // Storage states
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [escrows, setEscrows] = useState<EscrowTx[]>([]);
 
   // Submissions state
@@ -44,6 +45,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
       const myCamps = allCampaigns.filter(c => (c.influencers || []).some(i => (i.influencer_id ?? i.influencerId) === currentUser.id));
       const myEscrows = allEscrows.filter(e => (e.influencer_id ?? e.influencerId) === currentUser.id);
       setCampaigns(myCamps);
+      setAllCampaigns(allCampaigns);
       setEscrows(myEscrows);
     } catch (error) {
       console.error("Failed to refresh influencer dashboard", error);
@@ -181,6 +183,8 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
     (c.influencers || []).some(i => i.influencerId === currentUser.id && i.status === "completed")
   );
 
+  const availableCampaigns = allCampaigns.filter(c => c.status === "waiting" || c.status === "active");
+
   // Calculate earnings
   const earnedReleased = escrows.filter(e => e.status === "released").reduce((sum, current) => sum + current.amount, 0);
   const earnedLocked = escrows.filter(e => e.status === "locked" || e.status === "pending").reduce((sum, current) => sum + current.amount, 0);
@@ -221,6 +225,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
           {[
             { id: "invites", label: "Tawaran Kerjasama", icon: Inbox, badge: incomingInvites.length },
             { id: "active", label: "Tugas Berjalan", icon: FileText, badge: activeCamps.length },
+            { id: "browse", label: "Jelajah Campaign", icon: TrendingUp, badge: availableCampaigns.length },
             { id: "escrow", label: "Dompet Saya", icon: Wallet },
             { id: "settings", label: "Atur Profil", icon: Settings }
           ].map(item => {
@@ -357,7 +362,6 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                       </div>
                     </div>
 
-                    {/* Milestone contextual helper notice */}
                     {myMilestone?.status === "brief_ready" && (
                       <div className="p-4 rounded-2xl bg-[#FFF6EB] border border-[#ECD9C5] text-xs text-[#9B6F3E] flex gap-2">
                         <HelpCircle className="w-5 shrink-0" />
@@ -370,7 +374,6 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                       </div>
                     )}
 
-                    {/* AI Generated briefs displaying area */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-brand-text">
                         <FileText className="w-4 h-4 text-brand-blush-dark animate-pulse" />
@@ -381,7 +384,6 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                       </div>
                     </div>
 
-                    {/* Active Upload panel */}
                     {myMilestone?.status === "escrow_locked" && (
                       <div className="p-5 border border-dashed border-brand-sage-dark/50 bg-brand-sage/10 rounded-2xl space-y-4">
                         <div>
@@ -407,7 +409,6 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                       </div>
                     )}
 
-                    {/* Upload pending approval state of milestone */}
                     {myMilestone?.status === "content_uploaded" && (
                       <div className="p-5 rounded-2xl bg-brand-sky/15 border border-brand-sky-dark/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs select-text">
                         <div className="space-y-1">
@@ -435,7 +436,60 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
           </motion.div>
         )}
 
-        {/* TAB 3: SMART ESCROW WALLET */}
+        {/* TAB 3: CAMPAIGNS FOR BROWSE */}
+        {activeTab === "browse" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            <div>
+              <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-text">Jelajah Kampanye Terbuka</h2>
+              <p className="mt-1 text-sm text-brand-text-soft">
+                Temukan campaign yang tersedia tanpa perlu diundang. Pilih peluang brand yang cocok dengan gaya konten Anda.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {availableCampaigns.map((camp) => {
+                const isInvited = (camp.influencers || []).some(i => i.influencerId === currentUser.id);
+                return (
+                  <div key={camp.id} className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between gap-6">
+                    <div className="space-y-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-blush text-brand-blush-dark text-[10px] font-bold uppercase tracking-wider">
+                        {camp.category}
+                      </span>
+                      <h3 className="font-serif text-2xl font-bold text-brand-text">{camp.name}</h3>
+                      <p className="text-xs text-brand-text-soft max-w-2xl leading-relaxed">{camp.description}</p>
+                      <div className="flex flex-wrap gap-3 text-[11px] text-brand-text-light font-bold mt-2">
+                        <span>UMKM: {camp.umkmName}</span>
+                        <span>Platform: {camp.platform}</span>
+                        <span>Target: {camp.audience}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col justify-between items-start md:items-end gap-4 shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${camp.status === "active" ? "bg-brand-sage text-brand-sage-dark" : "bg-[#FBEED7] text-[#8C5D12]"}`}>
+                        {camp.status === "active" ? "Terbuka untuk Creator" : "Menunggu Undangan"}
+                      </span>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-widest">Budget</p>
+                        <p className="font-serif text-2xl font-black text-brand-sage-dark">Rp{camp.budget.toLocaleString()}</p>
+                      </div>
+                      <div className="text-xs text-brand-text-light">
+                        {isInvited ? "Anda telah diundang ke campaign ini" : "Bisa dipelajari tanpa undangan"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {availableCampaigns.length === 0 && (
+                <div className="bg-brand-white border border-brand-sand rounded-3xl p-12 text-center text-brand-text-soft text-xs leading-relaxed max-w-xl">
+                  Belum ada campaign terbuka untuk dilihat. Coba lagi nanti atau lengkapi profil agar UMKM lebih mudah menemukan Anda.
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 4: SMART ESCROW WALLET */}
         {activeTab === "escrow" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             <div>

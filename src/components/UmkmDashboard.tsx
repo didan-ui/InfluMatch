@@ -160,8 +160,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
     if (!newCampaignName) return;
 
     try {
-      const newCamp: Campaign = {
-        id: "camp-" + Date.now(),
+      const newCamp: Partial<Campaign> = {
         name: newCampaignName,
         umkm_id: currentUser.id,
         umkmId: currentUser.id,
@@ -175,10 +174,6 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
         audience: briefAudience || "",
         tone: briefTone || "",
         status: "waiting",
-        created_at: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         influencers: [],
       };
 
