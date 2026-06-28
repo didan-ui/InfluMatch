@@ -215,7 +215,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         <div className="grid grid-cols-12 gap-5">
           
           {/* Bento Hero - Admin Lavender Pastel Insight Box */}
-          <div className="col-span-12 lg:col-span-8 bg-brand-lav text-brand-text rounded-[2rem] p-8 relative overflow-hidden flex flex-col justify-between shadow-xs border border-brand-sand min-h-[250px]">
+          <div className="col-span-12 lg:col-span-8 bg-brand-lav text-brand-text rounded-4xl p-8 relative overflow-hidden flex flex-col justify-between shadow-xs border border-brand-sand min-h-62.5">
             <div className="relative z-10-lav">
               <span className="px-3 py-1 bg-brand-lav-dark/15 text-brand-lav-dark text-[10px] font-black rounded-full uppercase tracking-wider">
                 Platform Admin Console
@@ -242,7 +242,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
           </div>
 
           {/* Quick Stats Bento Alert Column (Warm Pastel Blush design style) */}
-          <div className="col-span-12 lg:col-span-4 bg-brand-blush border border-brand-sand rounded-[2rem] p-6 flex flex-col justify-between shadow-xs">
+          <div className="col-span-12 lg:col-span-4 bg-brand-blush border border-brand-sand rounded-4xl p-6 flex flex-col justify-between shadow-xs">
             <div className="space-y-2">
               <div className="w-10 h-10 bg-brand-white text-brand-blush-dark rounded-full flex items-center justify-center mb-1 shadow-xs">
                 <ShieldCheck className="w-5 h-5" />
@@ -415,7 +415,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
               <h3 className="font-serif text-xl font-bold text-brand-text">Platform Core Activity Log</h3>
               <p className="text-xs text-brand-text-soft leading-relaxed font-sans">Diagnosis sirkulasi database logging secara real-time. Memantau setiap tindakan login, registrasi, pembuatan AI Brief, dan pelepasan dana.</p>
 
-              <div className="space-y-3.5 mt-4 max-h-[500px] overflow-y-auto pr-2">
+              <div className="space-y-3.5 mt-4 max-h-125 overflow-y-auto pr-2">
                 {logs.map((log) => (
                   <div key={log.id} className="p-3.5 border border-brand-sand/65 rounded-2xl flex items-start gap-3.5 bg-brand-bg/30 text-xs">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold select-none text-[11px] ${

@@ -35,7 +35,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-grow flex flex-col"
+            className="grow flex flex-col"
           >
             <WelcomePage
               onNavigateToLogin={() => setScreen("login")}
@@ -81,7 +81,7 @@ export default function App() {
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="flex-grow flex flex-col"
+            className="grow flex flex-col"
           >
             {/* Role-based Dashboard */}
             {currentUser.role === "umkm" && (

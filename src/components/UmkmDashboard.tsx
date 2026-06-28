@@ -454,7 +454,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
             <div className="grid grid-cols-12 gap-5">
               
               {/* Bento Hero - Soft Sage Pastel Background with elegant dark-sage content */}
-              <div className="col-span-12 lg:col-span-8 bg-brand-sage text-brand-text rounded-[2rem] p-8 relative overflow-hidden flex flex-col justify-between shadow-xs border border-brand-sand min-h-[240px]">
+              <div className="col-span-12 lg:col-span-8 bg-brand-sage text-brand-text rounded-4xl p-8 relative overflow-hidden flex flex-col justify-between shadow-xs border border-brand-sand min-h-60">
                 <div className="relative z-10 space-y-3">
                   <span className="px-3 py-1 bg-brand-sage-dark/15 text-brand-sage-dark text-[10px] font-black rounded-full uppercase tracking-wider">
                     🚀 Halaman Pemilik Usaha
@@ -481,7 +481,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
               </div>
 
               {/* Bento Quick Action - Warm Blush Pink Pastel */}
-              <div className="col-span-12 lg:col-span-4 bg-brand-blush border border-brand-sand rounded-[2rem] p-7 flex flex-col justify-between shadow-xs text-brand-text">
+              <div className="col-span-12 lg:col-span-4 bg-brand-blush border border-brand-sand rounded-3xl p-7 flex flex-col justify-between shadow-xs text-brand-text">
                 <div className="space-y-2">
                   <div className="w-10 h-10 bg-brand-white text-brand-blush-dark rounded-full flex items-center justify-center mb-1 shadow-xs">
                     <Sparkles className="w-5 h-5" />
@@ -503,7 +503,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
             </div>
 
             {/* Smart recommendation spotlight */}
-            <div className="bg-brand-white border border-brand-sand rounded-[1.5rem] p-6 shadow-sm/10 flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm/10 flex flex-col lg:flex-row items-center justify-between gap-6">
               <div className="space-y-2 flex-1">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-sage text-brand-sage-dark text-[10px] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-sage-dark animate-pulse"></span>
@@ -576,7 +576,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                   </button>
                 </div>
 
-                <div className="space-y-3 overflow-y-auto max-h-[280px] pr-1">
+                <div className="space-y-3 overflow-y-auto max-h-70 pr-1">
                   {campaigns.map((camp) => (
                     <div key={camp.id} className="p-3.5 border border-brand-sand/70 rounded-2xl hover:bg-brand-bg/15 transition-all flex items-center justify-between gap-4">
                       <div>
@@ -934,7 +934,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
               <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm space-y-4">
                 <h3 className="font-serif text-xl font-bold text-brand-text">Tindakan Transaksi Aktif</h3>
 
-                <div className="space-y-3 overflow-y-auto max-h-[340px] pr-1">
+                <div className="space-y-3 overflow-y-auto max-h-85 pr-1">
                   {escrows.map((tx) => (
                     <div key={tx.id} className="p-3.5 border border-brand-sand/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                       <div>
@@ -947,7 +947,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                         {tx.status === "pending" && (
                           <button
                             onClick={() => handleLockEscrow(tx.id, tx.campaign_id, tx.influencer_id)}
-                            className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-xl hover:opacity-90 transition-all text-[11px] cursor-pointer cursor-pointer whitespace-nowrap"
+                            className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-xl hover:opacity-90 transition-all text-[11px] cursor-pointer whitespace-nowrap"
                           >
                             Kunci Dana Kemitraan (Bayar)
                           </button>
@@ -1127,7 +1127,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
               </div>
 
               {/* Real-time Generated output */}
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col h-[520px]">
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col h-130">
                 <h3 className="font-serif text-xl font-bold text-brand-text shrink-0">Hasil AI Brief</h3>
                 
                 {generationWarning && (
@@ -1237,7 +1237,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     <textarea
                       value={profileDesc}
                       onChange={(e) => setProfileDesc(e.target.value)}
-                      className="w-full min-h-[90px] border border-brand-sand bg-brand-bg/50 rounded-2xl px-4 py-3 font-medium text-brand-text text-xs focus:outline-none leading-relaxed mt-1 border-solid"
+                      className="w-full min-h-22.5 border border-brand-sand bg-brand-bg/50 rounded-2xl px-4 py-3 font-medium text-brand-text text-xs focus:outline-none leading-relaxed mt-1 border-solid"
                     />
                   </div>
 

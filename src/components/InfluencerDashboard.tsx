@@ -376,7 +376,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                         <FileText className="w-4 h-4 text-brand-blush-dark animate-pulse" />
                         <h4 className="text-xs font-black tracking-widest uppercase">KREATIF BRIEF INDEPTH (GENERASI AI):</h4>
                       </div>
-                      <div className="p-4 rounded-2xl bg-brand-bg text-xs font-serif text-brand-text leading-relaxed whitespace-pre-line border border-brand-sand block shadow-inner max-h-[220px] overflow-y-auto select-text scrollbar-thin">
+                      <div className="p-4 rounded-2xl bg-brand-bg text-xs font-serif text-brand-text leading-relaxed whitespace-pre-line border border-brand-sand block shadow-inner max-h-55 overflow-y-auto select-text scrollbar-thin">
                         {camp.briefText || "Belum ada brief yang dimasukkan oleh pemilik brand."}
                       </div>
                     </div>
@@ -510,7 +510,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                           <td className="py-3.5 px-4 font-bold">{camp.name}</td>
                           <td className="py-3.5 px-4 text-brand-text-soft">{camp.umkmName}</td>
                           <td className="py-3.5 px-4 font-mono font-bold text-brand-sage-dark">Rp{camp.budget.toLocaleString()}</td>
-                          <td className="py-3.5 px-4 text-brand-text-light underline truncate max-w-[150px]">
+                          <td className="py-3.5 px-4 text-brand-text-light underline truncate max-w-37.5">
                             <a href={me?.submissionUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-blush-dark inline-flex items-center gap-1">{me?.submissionUrl ? "Lihat Post" : "—"} <ExternalLink className="w-3" /></a>
                           </td>
                           <td className="py-3.5 px-4">
