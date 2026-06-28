@@ -27,6 +27,7 @@ export interface User {
   handle?: string;
   followers?: string;
   followersNum?: number;
+  description?: string;
   price_per_post?: number;
   pricePerPost?: string | number;
   niche?: string[];

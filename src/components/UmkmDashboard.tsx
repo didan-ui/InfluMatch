@@ -40,9 +40,9 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   const [selectedCampaignForBrief, setSelectedCampaignForBrief] = useState("");
   const [briefCampName, setBriefCampName] = useState("");
   const [briefObjective, setBriefObjective] = useState("Brand Awareness");
-  const [briefAudience, setBriefAudience] = useState("Mahasiswa");
-  const [briefPlatform, setBriefPlatform] = useState("TikTok");
-  const [briefTone, setBriefTone] = useState("Fun & Casual");
+  const [briefAudience, setBriefAudience] = useState("");
+  const [briefPlatform, setBriefPlatform] = useState("");
+  const [briefTone, setBriefTone] = useState("");
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [generatedBriefOutput, setGeneratedBriefOutput] = useState("");
   const [generationWarning, setGenerationWarning] = useState("");
@@ -50,10 +50,10 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   // Create Campaign form states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
-  const [newCampaignCategory, setNewCampaignCategory] = useState("Kuliner");
+  const [newCampaignCategory, setNewCampaignCategory] = useState(currentUser.brandCategory || "");
   const [newCampaignDesc, setNewCampaignDesc] = useState("");
   const [newCampaignBudget, setNewCampaignBudget] = useState(300000);
-  const [newCampaignPlatform, setNewCampaignPlatform] = useState("TikTok");
+  const [newCampaignPlatform, setNewCampaignPlatform] = useState("");
 
   // Invite Influencer Modal states
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -63,9 +63,9 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   // Profile forms
   const [profileName, setProfileName] = useState(currentUser.name);
   const [profileBrand, setProfileBrand] = useState(currentUser.brandName || "");
-  const [profileCategory, setProfileCategory] = useState(currentUser.brandCategory || "Kuliner");
-  const [profileCity, setProfileCity] = useState(currentUser.city || "Malang");
-  const [profileDesc, setProfileDesc] = useState("Warung lokal khas Nusantara dengan rasa berani & bumbu melimpah.");
+  const [profileCategory, setProfileCategory] = useState(currentUser.brandCategory || "");
+  const [profileCity, setProfileCity] = useState(currentUser.city || "");
+  const [profileDesc, setProfileDesc] = useState(currentUser.description || "");
   const [showProfileSuccess, setShowProfileSuccess] = useState(false);
   const [activeProfile, setActiveProfile] = useState<User>(currentUser);
 
@@ -85,8 +85,9 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
       setActiveProfile(profileMatch);
       setProfileName(profileMatch.name || currentUser.name);
       setProfileBrand(profileMatch.brandName || "");
-      setProfileCategory(profileMatch.brandCategory || "Kuliner");
-      setProfileCity(profileMatch.city || "Malang");
+      setProfileCategory(profileMatch.brandCategory || "");
+      setProfileCity(profileMatch.city || "");
+      setProfileDesc((profileMatch as any).description || "");
       setCampaigns(filteredCampaigns);
       setInfluencers(filteredUsers);
       setEscrows(filteredEscrows);
@@ -114,7 +115,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          campaignName: briefCampName || "Promo Menu Spesial",
+          campaignName: briefCampName,
           objective: briefObjective,
           audience: briefAudience,
           platform: briefPlatform,
@@ -167,12 +168,12 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
         umkm_name: currentUser.brandName || currentUser.name,
         umkmName: currentUser.brandName || currentUser.name,
         category: newCampaignCategory,
-        description: newCampaignDesc || "Tidak ada deskripsi rinci.",
+        description: newCampaignDesc || "",
         budget: Number(newCampaignBudget),
         platform: newCampaignPlatform,
-        objective: "Brand Awareness",
-        audience: "Mahasiswa",
-        tone: "Fun & Casual",
+        objective: briefObjective || "",
+        audience: briefAudience || "",
+        tone: briefTone || "",
         status: "waiting",
         created_at: new Date().toISOString(),
         createdAt: new Date().toISOString(),
@@ -338,6 +339,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
           brandCategory: profileCategory,
           brand_category: profileCategory,
           city: profileCity,
+          description: profileDesc,
         };
         await saveDbUser(updatedUser);
         await addDbLog(currentUser.name, "Update Profil", "Mengubah informasi profil UMKM", "umkm");
@@ -356,7 +358,48 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   const activeCampaignCount = campaigns.filter(c => c.status === "active").length;
   const totalEscrowValue = escrows.reduce((sum, tx) => sum + tx.amount, 0);
   const releasedEscrowValue = escrows.filter(e => e.status === "released").reduce((sum, tx) => sum + tx.amount, 0);
-  const matchScore = Math.min(99, 84 + campaigns.length * 2 + Math.max(0, influencers.length - 1) + (releasedEscrowValue > 0 ? 3 : 0));
+  const lockedEscrowCount = escrows.filter(e => e.status === "locked").length;
+  const pendingEscrowCount = escrows.filter(e => e.status === "pending").length;
+  const releasedEscrowCount = escrows.filter(e => e.status === "released").length;
+  const totalInfluencerInvites = campaigns.reduce((sum, camp) => sum + (camp.influencers?.length ?? 0), 0);
+  const matchScore = campaigns.length > 0
+    ? Math.round(
+        (campaigns.filter(c => (c.influencers?.length ?? 0) > 0).length / campaigns.length) * 100
+      )
+    : 0;
+  const escrowSuccessRate = escrows.length > 0 ? Math.round(((lockedEscrowCount + releasedEscrowCount) / escrows.length) * 100) : null;
+  const profileRating = activeProfile.rating || currentUser.rating || 0;
+  const profileRatingLabel = profileRating > 0 ? `${profileRating.toFixed(1)} ★` : "N/A";
+  const campaignBudgets = campaigns.slice(0, 5).map((camp, idx) => ({
+    x: 40 + idx * 120,
+    budget: camp.budget,
+    label: camp.name,
+  }));
+  const maxBudget = Math.max(...campaignBudgets.map(c => c.budget), 1);
+  const campaignChartSeries = campaignBudgets.map((camp) => ({
+    x: camp.x,
+    y: 210 - Math.round((camp.budget / maxBudget) * 160),
+    label: camp.label,
+    value: camp.budget,
+  }));
+  const chartHasData = campaignChartSeries.length > 0 && maxBudget > 0;
+  const chartPath = chartHasData
+    ? campaignChartSeries.map((point, idx) => `${idx === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ')
+    : '';
+  const chartFillPath = chartHasData
+    ? `${chartPath} L${campaignChartSeries[campaignChartSeries.length - 1].x} 210 L40 210 Z`
+    : '';
+  const insightRows = [
+    totalInfluencerInvites > 0
+      ? `Total undangan influencer: ${totalInfluencerInvites} dalam ${campaigns.length} kampanye.`
+      : "Belum ada undangan influencer terdata.",
+    lockedEscrowCount > 0
+      ? `Escrow sedang terkunci untuk ${lockedEscrowCount} transaksi.`
+      : "Belum ada pembayaran escrow terkunci.",
+    releasedEscrowCount > 0
+      ? `Transaksi selesai untuk ${releasedEscrowCount} pembayaran.`
+      : "Belum ada transaksi yang dicairkan.",
+  ];
   const recentLogs = logs.slice(0, 4);
 
   // Filter influencers for discover page
@@ -390,8 +433,8 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
               UM
             </div>
             <div>
-              <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{activeProfile.brandName || activeProfile.name || currentUser.brandName || "UMKM"}</h3>
-              <p className="text-[11px] text-brand-text-light font-medium tracking-tight uppercase mt-0.5">Kategori {profileCategory || activeProfile.brandCategory || "Kuliner"}</p>
+              <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{activeProfile.brandName || activeProfile.name || currentUser.brandName || currentUser.name}</h3>
+              <p className="text-[11px] text-brand-text-light font-medium tracking-tight uppercase mt-0.5">Kategori {profileCategory || activeProfile.brandCategory || "—"}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between">
@@ -460,10 +503,10 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     🚀 Halaman Pemilik Usaha
                   </span>
                   <h1 className="font-serif text-3xl lg:text-4xl font-normal tracking-tight mt-3 text-brand-text">
-                    Membantu Maju {activeProfile.brandName || activeProfile.name || currentUser.brandName || "UMKM Lokal"}
+                    Membantu Maju {activeProfile.brandName || activeProfile.name || currentUser.brandName || currentUser.name}
                   </h1>
                   <p className="text-brand-text-soft text-xs max-w-lg leading-relaxed">
-                    Hubungkan usaha kuliner, fashion, atau gaya hidup Anda dengan influencer mahasiswa kreatif di Malang. Gunakan bantuan AI pintar untuk membuat arahan promosi Anda secara otomatis.
+                    Hubungkan usaha Anda dengan influencer yang sesuai dengan target audiens dan kategori produk Anda. Gunakan bantuan AI untuk menyusun brief promosi yang relevan.
                   </p>
                 </div>
 
@@ -510,7 +553,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                   Saran Pintar AI Hari Ini
                 </span>
                 <p className="text-xs text-brand-text-soft leading-relaxed">
-                  <strong className="text-brand-text">Peluang Ramai Malam Hari:</strong> Mahasiswa kos di Malang sangat aktif memesan makanan malam pukul 18:30 - 20:30 WIB. Cobalah bekerjasama dengan influencer bertema "Lifestyle" atau "Kuliner" agar promosi Anda tepat sasaran.
+                  <strong className="text-brand-text">Saran terbaru:</strong> Gunakan data kampanye dan influencer yang sudah terhubung untuk menyesuaikan pesan promosi dengan audiens yang paling relevan untuk {activeProfile.brandName || currentUser.brandName || "brand Anda"}.
                 </p>
               </div>
             </div>
@@ -628,7 +671,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
             <div>
               <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-text">Cari Influencer yang Cocok</h2>
               <p className="mt-1 text-sm text-brand-text-soft">
-                Temukan mahasiswa kreatif di Malang untuk menawarkan kerjasama promosi produk Anda dengan pengikut asli.
+                Temukan influencer yang sesuai dengan kebutuhan promosi dan kategori usaha Anda.
               </p>
             </div>
 
@@ -690,7 +733,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                         <h4 className="font-serif font-black text-brand-text leading-none">{inf.name}</h4>
                         <span className="text-xs text-brand-text-light font-mono font-medium">{inf.handle}</span>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F6E7B2] text-[#8A6A11] text-[10px] font-bold">
-                          ★ {inf.rating || 4.8}
+                          ★ {inf.rating ? inf.rating.toFixed(1) : "N/A"}
                         </span>
                       </div>
 
@@ -712,15 +755,21 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     <div className="flex gap-5">
                       <div>
                         <p className="text-[10px] font-bold text-brand-text-light tracking-wide uppercase">Pengikut</p>
-                        <p className="font-serif text-lg font-bold text-brand-text mt-0.5">{inf.followers}</p>
+                        <p className="font-serif text-lg font-bold text-brand-text mt-0.5">{inf.followers || "N/A"}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-brand-text-light tracking-wide uppercase">Kelekatan (Engagement)</p>
-                        <p className="font-serif text-lg font-bold text-brand-text mt-0.5">{inf.engagement || "7.5%"}</p>
+                        <p className="font-serif text-lg font-bold text-brand-text mt-0.5">
+                          {inf.engagement != null ? `${inf.engagement.toFixed(1)}%` : "N/A"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-brand-text-light tracking-wide uppercase">Biaya Jasa</p>
-                        <p className="font-serif text-lg font-bold text-brand-text-soft mt-0.5">{inf.pricePerPost}</p>
+                        <p className="font-serif text-lg font-bold text-brand-text-soft mt-0.5">
+                          {typeof inf.pricePerPost === "number"
+                            ? `Rp${inf.pricePerPost.toLocaleString()}`
+                            : inf.pricePerPost || "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -766,42 +815,55 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                 </div>
 
                 <div className="w-full overflow-hidden justify-center items-center flex rounded-2xl bg-brand-bg/30 border border-brand-sand/50 p-4">
-                  {/* Native precision SVG Area Graph */}
-                  <svg viewBox="0 0 600 240" className="w-full h-auto select-none">
-                    <line x1="40" y1="40" x2="560" y2="40" stroke="#E8DED2" strokeDasharray="4 4" />
-                    <line x1="40" y1="90" x2="560" y2="90" stroke="#E8DED2" strokeDasharray="4 4" />
-                    <line x1="40" y1="140" x2="560" y2="140" stroke="#E8DED2" strokeDasharray="4 4" />
-                    <line x1="40" y1="190" x2="560" y2="190" stroke="#E8DED2" strokeDasharray="4 4" />
+                  {chartHasData ? (
+                    <svg viewBox="0 0 600 240" className="w-full h-auto select-none">
+                      <line x1="40" y1="40" x2="560" y2="40" stroke="#E8DED2" strokeDasharray="4 4" />
+                      <line x1="40" y1="90" x2="560" y2="90" stroke="#E8DED2" strokeDasharray="4 4" />
+                      <line x1="40" y1="140" x2="560" y2="140" stroke="#E8DED2" strokeDasharray="4 4" />
+                      <line x1="40" y1="190" x2="560" y2="190" stroke="#E8DED2" strokeDasharray="4 4" />
 
-                    {/* Shading Area */}
-                    <path
-                      d="M40 180 C110 150, 180 145, 250 110 S390 85, 460 100 S520 60, 560 70 L560 210 L40 210 Z"
-                      fill="rgba(184,109,94,0.12)"
-                    />
+                      <path
+                        d={chartFillPath}
+                        fill="rgba(184,109,94,0.12)"
+                      />
+                      <path
+                        d={chartPath}
+                        fill="none"
+                        stroke="#B86D5E"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                      />
 
-                    {/* Border Line */}
-                    <path
-                      d="M40 180 C110 150, 180 145, 250 110 S390 85, 460 100 S520 60, 560 70"
-                      fill="none"
-                      stroke="#B86D5E"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                    />
+                      {campaignChartSeries.map((point, idx) => (
+                        <circle
+                          key={idx}
+                          cx={point.x}
+                          cy={point.y}
+                          r="6"
+                          fill="#B86D5E"
+                          stroke="#FFFFFF"
+                          strokeWidth="2"
+                        />
+                      ))}
 
-                    {/* Nodes */}
-                    <circle cx="40" cy="180" r="6" fill="#B86D5E" stroke="#FFFFFF" strokeWidth="2" />
-                    <circle cx="160" cy="148" r="6" fill="#B86D5E" stroke="#FFFFFF" strokeWidth="2" />
-                    <circle cx="280" cy="105" r="6" fill="#B86D5E" stroke="#FFFFFF" strokeWidth="2" />
-                    <circle cx="420" cy="95" r="6" fill="#B86D5E" stroke="#FFFFFF" strokeWidth="2" />
-                    <circle cx="560" cy="70" r="6" fill="#B86D5E" stroke="#FFFFFF" strokeWidth="2" />
-
-                    {/* Day Text Labels */}
-                    <text x="35" y="230" fontSize="12" className="fill-brand-text-light font-bold">Sen</text>
-                    <text x="155" y="230" fontSize="12" className="fill-brand-text-light font-bold">Sel</text>
-                    <text x="275" y="230" fontSize="12" className="fill-brand-text-light font-bold">Rab</text>
-                    <text x="415" y="230" fontSize="12" className="fill-brand-text-light font-bold">Kam</text>
-                    <text x="545" y="230" fontSize="12" className="fill-brand-text-light font-bold">Jum</text>
-                  </svg>
+                      {campaignChartSeries.map((point, idx) => (
+                        <text
+                          key={`label-${idx}`}
+                          x={point.x}
+                          y="230"
+                          fontSize="12"
+                          textAnchor="middle"
+                          className="fill-brand-text-light font-bold"
+                        >
+                          {`C${idx + 1}`}
+                        </text>
+                      ))}
+                    </svg>
+                  ) : (
+                    <div className="text-center text-xs text-brand-text-light">
+                      Tambahkan kampanye dan undangan influencer untuk melihat tren performa.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -813,11 +875,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                 </div>
 
                 <div className="space-y-4">
-                  {[
-                    "Konten berbentuk Shorts/TikTok Reels memperoleh CTR +18% lebih tinggi dibanding gambar statis.",
-                    "Gen-Z & Mahasiswa Malang merespon positif konten berkonsep 'Makan Hemat Akhir Bulan'.",
-                    "Aktivitas audiens puncak terdeteksi di hari Kamis malam, rekomendasikan posting terjadwal hari itu."
-                  ].map((insight, j) => (
+                  {insightRows.map((insight, j) => (
                     <div key={j} className="flex gap-2.5 items-start">
                       <div className="w-1.5 h-1.5 rounded-full bg-brand-blush-dark mt-1.5 shrink-0" />
                       <p className="text-xs text-brand-text-soft leading-relaxed">{insight}</p>
@@ -1045,7 +1103,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     <label className="block mb-2">Nama Kampanye Kreatif</label>
                     <input
                       type="text"
-                      placeholder="Contoh: Promo Kuliner Geprek Level Lava"
+                      placeholder="Nama kampanye Anda"
                       value={briefCampName}
                       onChange={(e) => setBriefCampName(e.target.value)}
                       className="w-full mt-1.5 border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-3 font-medium text-brand-text focus:outline-none"
@@ -1142,8 +1200,8 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     <div className="flex flex-col items-center justify-center h-full space-y-3 shrink-0">
                       <div className="w-10 h-10 border-4 border-brand-blush-dark border-t-transparent rounded-full animate-spin"></div>
                       <p className="text-xs font-sans text-brand-text-soft text-center animate-pulse">
-                        Menganalisis demografi audiens ideal di Malang... <br />
-                        Menyusun formula Do's & Don'ts khusus untuk menu {currentUser.brandName}!
+                        Menganalisis target audiens dan pola konten yang relevan untuk {currentUser.brandName || "brand Anda"}... <br />
+                        Menyusun formula Do's & Don'ts yang sesuai dengan kebutuhan kampanye Anda.
                       </p>
                     </div>
                   ) : generatedBriefOutput ? (
@@ -1180,7 +1238,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                 {showProfileSuccess && (
                   <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-3.5 text-xs flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 shrink-0" />
-                    <span>Informasi usaha berhasil diperbarui di server lokal.</span>
+                    <span>Informasi usaha berhasil diperbarui di server.</span>
                   </div>
                 )}
 
@@ -1259,35 +1317,39 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                   <div className="grid grid-cols-2 gap-4 my-4">
                     <div className="bg-brand-bg/40 border border-brand-sand/50 rounded-2xl p-4 text-center">
                       <p className="text-[10px] text-brand-text-light font-bold">RATING UMKM</p>
-                      <p className="font-serif text-3xl font-black text-brand-text mt-1">4.9 ★</p>
-                      <p className="text-[10px] text-brand-text-soft mt-1">Sangat komunikatif</p>
+                      <p className="font-serif text-3xl font-black text-brand-text mt-1">{profileRatingLabel}</p>
+                      <p className="text-[10px] text-brand-text-soft mt-1">
+                        {activeProfile.city ? `Operasional di ${activeProfile.city}` : "Lokasi usaha terhubung dari backend"}
+                      </p>
                     </div>
 
                     <div className="bg-brand-bg/40 border border-brand-sand/50 rounded-2xl p-4 text-center">
                       <p className="text-[10px] text-brand-text-light font-bold">KAMPANYE LOKAL</p>
-                      <p className="font-serif text-3xl font-black text-brand-text mt-1">{campaigns.length} Sukses</p>
-                      <p className="text-[10px] text-brand-text-soft mt-1">Selesai teratur</p>
+                      <p className="font-serif text-3xl font-black text-brand-text mt-1">{campaigns.length}</p>
+                      <p className="text-[10px] text-brand-text-soft mt-1">kampanye aktif atau terdaftar</p>
                     </div>
                   </div>
 
                   <div className="space-y-3 pt-3">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-brand-text-soft font-medium">Kecepatan Pembayaran (Lock Escrow):</span>
-                      <span className="font-bold text-brand-sage-dark font-mono">98% Tepat Waktu</span>
+                      <span className="text-brand-text-soft font-medium">Kecepatan Penyelesaian Escrow:</span>
+                      <span className="font-bold text-brand-sage-dark font-mono">
+                        {escrowSuccessRate !== null ? `${escrowSuccessRate}% terselesaikan` : "Belum ada transaksi"
+                      }</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-brand-text-soft font-medium">Indepth Brief Rating:</span>
-                      <span className="font-bold text-brand-text font-mono">4.8 / 5.0</span>
+                      <span className="text-brand-text-soft font-medium">Undangan Influencer:</span>
+                      <span className="font-bold text-brand-text font-mono">{totalInfluencerInvites} terhubung</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-brand-text-soft font-medium">Rekomendasi Ulang Influencer:</span>
-                      <span className="font-bold text-[#8A6A11] font-mono">100% Puas</span>
+                      <span className="text-brand-text-soft font-medium">Transaksi Terbayar:</span>
+                      <span className="font-bold text-[#8A6A11] font-mono">{releasedEscrowCount} selesai</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-brand-sage/20 border border-brand-sage-dark/15 rounded-2xl p-3.5 text-xs text-brand-sage-dark mt-6">
-                  Profil Anda memiliki badge <span className="font-bold">"Fast Escrow release"</span>. Hal ini membuat influencer 2.5x lebih bersedia menerima undangan kerjasama Anda secara instan.
+                  Data metrik profil ditarik langsung dari state backend platform. Nilai ini akan diperbarui ketika kampanye dan escrow tercatat.
                 </div>
               </div>
 
@@ -1318,7 +1380,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     <input
                       type="text"
                       required
-                      placeholder="Contoh: Promo Kuliner Akhir Bulan"
+                      placeholder="Nama kampanye Anda"
                       value={newCampaignName}
                       onChange={(e) => setNewCampaignName(e.target.value)}
                       className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none"
@@ -1328,7 +1390,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                   <div>
                     <label className="block mb-1.5">Deskripsi Singkat</label>
                     <textarea
-                      placeholder="Apa fokus utama kampanye?"
+                      placeholder="Deskripsi singkat kampanye"
                       value={newCampaignDesc}
                       onChange={(e) => setNewCampaignDesc(e.target.value)}
                       className="w-full h-16 border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2 font-medium text-brand-text focus:outline-none border-solid mt-1 text-xs"

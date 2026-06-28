@@ -31,10 +31,10 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
   const [submissionUrls, setSubmissionUrls] = useState<{ [campId: string]: string }>({});
 
   // Settings states
-  const [price, setPrice] = useState(currentUser.pricePerPost || "Rp250.000");
-  const [followers, setFollowers] = useState(currentUser.followers || "5.1K");
-  const [handle, setHandle] = useState(currentUser.handle || "@siska");
-  const [city, setCity] = useState(currentUser.city || "Malang");
+  const [price, setPrice] = useState(currentUser.pricePerPost || "");
+  const [followers, setFollowers] = useState(currentUser.followers || "");
+  const [handle, setHandle] = useState(currentUser.handle || "");
+  const [city, setCity] = useState(currentUser.city || "");
   const [niche, setNiche] = useState<string[]>(currentUser.niche || []);
   const [showSettingsSuccess, setShowSettingsSuccess] = useState(false);
 
@@ -263,7 +263,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
             <div>
               <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-text">Tawaran Kerjasama Masuk</h2>
               <p className="mt-1 text-sm text-brand-text-soft">
-                Tinjau tawaran promosi dan kerjasama dari pemilik usaha lokal di Malang yang pas dengan profil Anda.
+                Tinjau tawaran promosi dan kerjasama dari pemilik usaha yang sesuai dengan profil Anda.
               </p>
             </div>
 
@@ -481,7 +481,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                 </div>
 
                 <div className="text-[10px] bg-brand-sage text-brand-sage-dark font-bold rounded-lg p-2.5 text-center uppercase tracking-wide">
-                  Top tier Malang Influencer
+                  {currentUser.handle ? `Profil ${currentUser.handle}` : "Profil Aktif"}
                 </div>
               </div>
 
@@ -668,7 +668,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                 </div>
 
                 <div className="p-3.5 bg-brand-blush/25 border border-brand-blush-dark/15 rounded-xl text-xs text-brand-text-soft leading-relaxed mt-6">
-                  Akun Anda saat ini memiliki reputasi <span className="font-bold text-brand-blush-dark">Gold Star Elite</span>. Brand mitra akan melihat profil Anda direkomendasikan pada halaman pencarian utama mereka!
+                  Akun Anda saat ini memiliki reputasi <span className="font-bold text-brand-blush-dark">{currentUser.rating > 0 ? `${currentUser.rating.toFixed(1)} / 5.0` : "baru"}</span>. Brand mitra dapat melihat profil Anda berdasarkan data yang sudah Anda lengkapi.
                 </div>
               </div>
 

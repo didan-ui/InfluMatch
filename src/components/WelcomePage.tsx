@@ -28,7 +28,11 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
   const [users, setUsers] = useState<User[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedNiche, setSelectedNiche] = useState<string>("Semua");
-  const niches = ["Semua", "Kuliner", "Fashion", "Lifestyle", "Kecantikan"];
+  const allNiches = Array.from(new Set([
+    ...users.flatMap(user => user.niche ?? []),
+    ...campaigns.map(campaign => campaign.category).filter(Boolean),
+  ]));
+  const niches = ["Semua", ...allNiches];
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,7 +66,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
           </div>
           <div className="flex flex-col">
             <span className="font-serif text-xl font-bold tracking-tight text-brand-text leading-none">InfluMatch</span>
-            <span className="text-[9px] text-[#58816E] font-bold uppercase tracking-wider mt-1">Malang Synergy</span>
+            <span className="text-[9px] text-brand-sage-dark font-bold uppercase tracking-wider mt-1">InfluMatch</span>
           </div>
         </div>
 
@@ -93,7 +97,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
           <section className="col-span-12 lg:col-span-8 bg-brand-sage border border-brand-sand rounded-[2rem] p-8 relative overflow-hidden flex flex-col justify-between min-h-[300px]">
             <div className="space-y-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-white/80 border border-brand-sand/40 text-brand-sage-dark text-[10px] font-black rounded-full uppercase tracking-wider">
-                <Sparkles className="w-3 h-3 text-[#58816E] animate-pulse" /> Platform Kerjasama UMKM & Mahasiswa Malang
+                <Sparkles className="w-3 h-3 text-brand-sage-dark animate-pulse" /> Platform Kerjasama UMKM & Influencer Terverifikasi
               </span>
               
               <h1 className="font-serif text-[#2D2825] text-3xl lg:text-5xl font-normal leading-tight tracking-tight max-w-2xl">
@@ -102,7 +106,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
               </h1>
               
               <p className="text-brand-text-soft text-xs max-w-lg leading-relaxed">
-                Platform terpercaya yang menghubungkan usaha kecil / UMKM di Malang dengan influencer mahasiswa untuk bekerjasama promosi. Mudah membuat arahan iklan (brief) dibantu asisten AI pintar.
+                Platform yang menghubungkan usaha dengan influencer yang sesuai untuk kolaborasi promosi yang aman dan terukur.
               </p>
             </div>
 
@@ -116,8 +120,8 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                 <p className="font-serif text-lg md:text-xl font-bold text-brand-text">{influencers.length} Profil</p>
               </div>
               <div>
-                <p className="text-[9px] font-bold text-brand-text-light uppercase tracking-wider">Asli Tanpa Bot</p>
-                <p className="font-serif text-lg md:text-xl font-bold text-brand-sage-dark">100% Mahasiswa</p>
+                <p className="text-[9px] font-bold text-brand-text-light uppercase tracking-wider">Akun Aktif</p>
+                <p className="font-serif text-lg md:text-xl font-bold text-brand-sage-dark">{users.filter(user => user.isApproved).length} akun</p>
               </div>
             </div>
           </section>
@@ -130,7 +134,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
               </div>
               <h3 className="font-serif text-2xl font-normal text-brand-text">Gabung Gerakan</h3>
               <p className="text-xs text-brand-text-soft leading-relaxed">
-                Butuh memperluas jangkauan brand kuliner Anda atau ingin mendapatkan penghasilan saku tambahan dari hobi membuat video? Klik opsi di bawah.
+                Butuh memperluas jangkauan brand Anda atau ingin menampilkan konten Anda kepada mitra yang sesuai? Klik opsi di bawah.
               </p>
             </div>
 
@@ -164,7 +168,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-sky-dark/80"></span>
                   <h3 className="font-serif text-2xl font-normal text-brand-text"> Influencer Mahasiswa</h3>
                 </div>
-                <p className="text-xs text-brand-text-soft mt-1">InfluencerMahasiswa dengan Penonton organik dari kampus-kampus besar Malang</p>
+                <p className="text-xs text-brand-text-soft mt-1">Profil influencer yang sudah terdaftar dan siap dikolaborasikan</p>
               </div>
 
               {/* Niche filtration tabs */}
@@ -229,7 +233,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                       </span>
                     ))}
                     <span className="px-2 py-0.5 bg-brand-sage text-brand-sage-dark text-[9px] font-bold rounded-md ml-auto">
-                      {inf.city || "Malang"}
+                      {inf.city || "—"}
                     </span>
                   </div>
 
@@ -257,9 +261,9 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-brand-blush-dark/80"></span>
-                <h3 className="font-serif text-2xl font-normal text-brand-text">Proyek UMKM Malang</h3>
+                <h3 className="font-serif text-2xl font-normal text-brand-text">Proyek UMKM Aktif</h3>
               </div>
-              <p className="text-xs text-brand-text-soft mt-1">Daftar usaha lokal yang sedang mencari bantuan promosi dari mahasiswa</p>
+              <p className="text-xs text-brand-text-soft mt-1">Daftar usaha yang sedang mencari mitra promosi sesuai kebutuhan mereka</p>
             </div>
 
             <div className="space-y-3.5">
@@ -361,7 +365,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
       {/* FOOTER BAR */}
       <footer className="w-full bg-brand-white border-t border-brand-sand/65 mt-12 py-6 text-center select-none">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] font-medium text-brand-text-light">
-          <div>© 2026 InfluMatch Platform Jatim. Built to support Malang's Micro-Businesses.</div>
+          <div>© 2026 InfluMatch. Platform kolaborasi UMKM dan influencer berbasis data.</div>
           <div className="flex gap-4">
             <span className="hover:text-brand-text-soft cursor-pointer">Panduan Keamanan</span>
             <span className="hover:text-brand-text-soft cursor-pointer">Syarat & Ketentuan</span>

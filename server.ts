@@ -259,9 +259,8 @@ app.get("/api/campaigns/:campaignId", async (req, res) => {
 
 app.post("/api/campaigns", async (req, res) => {
   try {
-    // Get current user (from session/token)
-    const umkmId = req.body.umkm_id || "dummy-umkm-id"; // TODO: Extract from auth
-    const umkmName = req.body.umkm_name || "UMKM"; // TODO: Extract from auth
+    const umkmId = req.body.umkm_id ?? req.body.umkmId ?? null;
+    const umkmName = req.body.umkm_name ?? req.body.umkmName ?? req.body.brand_name ?? req.body.brandName ?? null;
 
     const { data, error } = await supabase
       .from("campaigns")
@@ -648,15 +647,23 @@ app.post("/api/generate-brief", async (req, res) => {
   const { campaignName, objective, audience, platform, tone, brandName, brandCategory } = req.body;
 
   try {
+    const resolvedBrandName = brandName || "brand Anda";
+    const resolvedBrandCategory = brandCategory || "kategori usaha";
+    const resolvedCampaignName = campaignName || "kampanye Anda";
+    const resolvedObjective = objective || "tujuan kampanye";
+    const resolvedAudience = audience || "audiens target";
+    const resolvedPlatform = platform || "platform utama";
+    const resolvedTone = tone || "tone konten";
+
     const prompt = `
       Buatkan sebuah brief pemasaran influencer yang detail, profesional, dan sangat menarik untuk kampanye UMKM lokal berikut:
-      - Nama Brand: ${brandName || "Ayam Geprek Pak Budi"}
-      - Kategori Bisnis: ${brandCategory || "Kuliner"}
-      - Nama Kampanye: ${campaignName || "Promo Menu Baru"}
-      - Tujuan/Objective Kampanye: ${objective || "Brand Awareness"}
-      - Target Audiens utama: ${audience || "Mahasiswa"}
-      - Platform Konten: ${platform || "TikTok"}
-      - Karakter Konten / Tone: ${tone || "Fun & Casual"}
+      - Nama Brand: ${resolvedBrandName}
+      - Kategori Bisnis: ${resolvedBrandCategory}
+      - Nama Kampanye: ${resolvedCampaignName}
+      - Tujuan/Objective Kampanye: ${resolvedObjective}
+      - Target Audiens utama: ${resolvedAudience}
+      - Platform Konten: ${resolvedPlatform}
+      - Karakter Konten / Tone: ${resolvedTone}
 
       Persyaratan output brief harus menggunakan bahasa Indonesia yang santai tapi profesional, informatif, dan terstruktur rapi menggunakan format Markdown. Sertakan poin-poin berikut:
       1. Ringkasan Kampanye (deskripsi singkat yang menggugah semangat).
@@ -684,44 +691,44 @@ app.post("/api/generate-brief", async (req, res) => {
       if (apiError.message === "GEMINI_API_KEY_MISSING" || (apiError.status && apiError.status === 400)) {
         console.warn("GEMINI_API_KEY is missing or invalid. Falling back to local template response.");
         // Generate a high-fidelity preset response when API key is missing
-        const fallbackBrief = `### 🌟 COLLABORATION BRIEF: ${campaignName || "Kelezatan Lokal"}
+        const fallbackBrief = `### 🌟 COLLABORATION BRIEF: ${resolvedCampaignName}
 
-> **Brand:** ${brandName || "Ayam Geprek Pak Budi"} (${brandCategory || "Kuliner"})  
-> **Platform Utama:** **${platform || "TikTok"}** | **Tone:** *${tone || "Fun & Casual"}*  
-> **Target Audiens:** ${audience || "Mahasiswa"}
+> **Brand:** ${resolvedBrandName} (${resolvedBrandCategory})  
+> **Platform Utama:** **${resolvedPlatform}** | **Tone:** *${resolvedTone}*  
+> **Target Audiens:** ${resolvedAudience}
 
 ---
 
 #### 1. 📌 Ringkasan Kampanye
-*Halo kak!* Selamat bergabung dalam kampanye **"${campaignName || "Promo Menu Baru"}"**. Di sini kita ingin mengenalkan menu andalan dari **${brandName || "Ayam Geprek Pak Budi"}** ke audiens lokal, terutama teman-teman *${audience || "Mahasiswa"}*. Kita ingin menunjukkan bahwa makan enak gak harus mahal, dan rasanya bikin nagih banget!
+Halo! Selamat bergabung dalam kampanye **"${resolvedCampaignName}"**. Kami ingin memperkenalkan **${resolvedBrandName}** kepada audiens yang sesuai dengan kebutuhan promosi saat ini, dengan fokus pada pesan yang jelas dan meyakinkan.
 
 #### 2. 🎬 Hook Video & Ide Konten
-*   **3 Detik Pertama (Hook Maut):** Buka video dengan ekspresi makan yang lahap atau tunjukkan visual close-up bumbu geprek yang masih panas dan berdesis!
-*   **Kalimat Hook:** *"Beneran deh, ini dia porsi penyelamat akhir bulan anak kos Malang yang aslinya bikin keringetan!"* atau *"Pecinta pedas wajib merapat, nemu ayam geprek paling juara di dekat kampus!"*
+*   **3 Detik Pertama (Hook Maut):** Buka video dengan visual menarik, fokus pada produk atau value utama yang ingin disampaikan.
+*   **Kalimat Hook:** *"Coba lihat bagaimana brand ini menghadirkan solusi yang relevan dan menarik untuk kebutuhan sehari-hari."*
 *   **Alur Rekomendasi:** 
-    1. Datang langsung ke outlet atau tunjukkan saat unboxing paket pengiriman dengan estetis.
-    2. Review jujur rasa sambalnya, tekstur ayam yang renyah di luar tapi juicy di dalam.
-    3. Tunjukkan harga paket promo akhir bulan yang super hemat untuk kantong ${audience || "mahasiswa"}.
+    1. Tampilkan produk atau layanan dengan visual yang jelas dan autentik.
+    2. Jelaskan nilai utama yang paling relevan bagi audiens target.
+    3. Soroti manfaat atau momen promosi secara ringkas dan meyakinkan.
 
 #### 3. ✅ Aturan Do's & Don'ts
 | **Do's (Lakukan)** | **Don'ts (Hindari)** |
 | :--- | :--- |
-| Tampilkan produk secara jelas & *close-up* menggiurkan | Menyebutkan atau membandingkan dengan kompetitor lain |
-| Sebutkan harga promo dengan ceria & antusias | Menampilkan logo brand lain secara sengaja dalam video |
-| Pasang lagu latar yang sedang trending di ${platform || "TikTok"} | Ekspresi wajah pasif atau tidak bersemangat saat review |
-| Cantumkan alamat atau link pembelian di bio/caption | Membuat klaim berlebihan yang tidak sesuai fakta |
+| Tampilkan produk secara jelas dan menarik | Membandingkan dengan kompetitor secara negatif |
+| Sampaikan pesan dengan suara yang natural dan jujur | Membuat klaim yang tidak sesuai fakta |
+| Sesuaikan konten dengan ${resolvedPlatform} | Mengabaikan konteks audiens yang dituju |
+| Cantumkan informasi penting pada caption atau bio | Menggunakan bahasa yang terlalu promosi dan tidak relevan |
 
 #### 4. ✍️ Rekomendasi Caption & Hashtags
 **Opsi Caption:**
-> "Udah masuk pertengahan bulan tapi pengen makan mewah? Tenang, cobain menu andalan rasa bintang lima dari **${brandName || "Ayam Geprek Pak Budi"}**! Porsinya melimpah, pedesnya nampol, harganya ramah dompet. Yuk mampir sekarang! 🔥🍗 #GeprekPakBudi #KulinerViral #AnakKosMalang"
+> "Konten yang menyampaikan nilai nyata dari **${resolvedBrandName}** bisa menjadi cara yang efektif untuk membangun kepercayaan dan mendorong minat audiens. Mari lihat bagaimana brand ini hadir di tengah kebutuhan sehari-hari."
 
 **Hashtags Terpilih:**
-'#umkmindonesia' '#localpride' '#kuliner' + (platform === "TikTok" ? "tiktok" : "viral") + ' #makanhemat'
+'#brandstory' '#kolaborasi' '#kontenrelevan' '#promosimudah'
 
 #### 5. ⏰ Best Upload Time & Metrik
-*   **Waktu Posting Terbaik:** Pukul **18.30 - 20.30 WIB** (saat jam santai mahasiswa makan malam).
-*   **Target KPI:** Memaksimalkan komentar (Comment Engagement) dan jumlah share/repost untuk memperluas jangkauan ke teman seangkatan kampus.
-*   **Catatan Escrow:** Pembayaran akan dicairkan otomatis setelah konten aktif selama minimal 24 jam dan link diposting serta divalidasi oleh sistem InfluMatch.
+*   **Waktu Posting Terbaik:** Sesuaikan dengan jam aktivitas audiens Anda.
+*   **Target KPI:** Fokus pada engagement, keterlibatan komentar, dan jumlah share untuk memperluas jangkauan.
+*   **Catatan Escrow:** Pembayaran akan dicairkan setelah konten disetujui dan divalidasi sesuai alur platform.
 
 ---
 *Catatan: Brief ini digenerate secara responsif oleh asisten AI internal InfluMatch.*`;

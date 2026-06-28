@@ -312,7 +312,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         <td className="py-3.5 px-4 font-mono select-all">
                           {u.role === "umkm" ? (u.brandName || "—") : (u.handle || "—")}
                         </td>
-                        <td className="py-3.5 px-4 text-brand-text-soft">{u.city || "Malang, Jatim"}</td>
+                        <td className="py-3.5 px-4 text-brand-text-soft">{u.city || "—"}</td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] ${
                             u.isApproved ? "bg-brand-sage text-brand-sage-dark" : "bg-yellow-105 bg-[#FDF2CB] text-[#907010]"

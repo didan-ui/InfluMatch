@@ -18,16 +18,16 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
 
   // UMKM specific fields
   const [brandName, setBrandName] = useState("");
-  const [brandCategory, setBrandCategory] = useState("Kuliner");
+  const [brandCategory, setBrandCategory] = useState("");
 
   // Influencer specific fields
   const [handle, setHandle] = useState("");
-  const [followers, setFollowers] = useState("5K");
-  const [niche, setNiche] = useState<string[]>(["Kuliner"]);
-  const [pricePerPost, setPricePerPost] = useState("Rp250.000");
+  const [followers, setFollowers] = useState("");
+  const [niche, setNiche] = useState<string[]>([]);
+  const [pricePerPost, setPricePerPost] = useState("");
 
   // Common fields
-  const [city, setCity] = useState("Malang");
+  const [city, setCity] = useState("");
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const { register, loading } = useAuth();
@@ -54,8 +54,23 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
       return;
     }
 
+    if (role === "umkm" && !brandCategory) {
+      setNotification({ type: 'error', text: "Mohon pilih kategori usaha Anda." });
+      return;
+    }
+
     if (role === "influencer" && !handle) {
       setNotification({ type: 'error', text: "Mohon masukkan username media sosial Anda." });
+      return;
+    }
+
+    if (role === "influencer" && (!followers || !pricePerPost)) {
+      setNotification({ type: 'error', text: "Mohon lengkapi estimasi followers dan tarif kerja sama Anda." });
+      return;
+    }
+
+    if (!city) {
+      setNotification({ type: 'error', text: "Mohon pilih domisili kota Anda." });
       return;
     }
 
@@ -181,7 +196,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Budi Prasetyo"
+                  placeholder="Nama lengkap Anda"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-blush-dark/45"
@@ -195,7 +210,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                 <input
                   type="email"
                   required
-                  placeholder="budi@email.com"
+                  placeholder="email@anda.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-blush-dark/45"
@@ -227,6 +242,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                   onChange={(e) => setCity(e.target.value)}
                   className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none focus:ring-1 focus:ring-brand-blush-dark/45"
                 >
+                  <option value="">Pilih kota</option>
                   <option value="Malang">Malang, Jawa Timur</option>
                   <option value="Surabaya">Surabaya, Jawa Timur</option>
                   <option value="Sidoarjo">Sidoarjo, Jawa Timur</option>
@@ -253,7 +269,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                     </label>
                     <input
                       type="text"
-                      placeholder="Contoh: Ayam Geprek Pak Budi"
+                      placeholder="Nama brand usaha Anda"
                       value={brandName}
                       onChange={(e) => setBrandName(e.target.value)}
                       className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none focus:ring-1"
@@ -269,6 +285,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                       onChange={(e) => setBrandCategory(e.target.value)}
                       className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none"
                     >
+                      <option value="">Pilih kategori usaha</option>
                       <option value="Kuliner">Kuliner Tradisional / Kontemporer</option>
                       <option value="Fashion">Fashion & Aksesoris Lokal</option>
                       <option value="Kecantikan">美容 Kecantikan & Kosmetik</option>
@@ -293,7 +310,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                     </label>
                     <input
                       type="text"
-                      placeholder="@siskarahayu"
+                      placeholder="@username"
                       value={handle}
                       onChange={(e) => setHandle(e.target.value)}
                       className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none"
@@ -309,6 +326,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                       onChange={(e) => setFollowers(e.target.value)}
                       className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none"
                     >
+                      <option value="">Pilih estimasi followers</option>
                       <option value="2K">2K – Mini Micro</option>
                       <option value="5K">5K – Micro</option>
                       <option value="10K">10K – Rising Star</option>
@@ -325,6 +343,7 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
                       onChange={(e) => setPricePerPost(e.target.value)}
                       className="mt-2 block w-full rounded-2xl border border-brand-sand px-4 py-2.5 bg-brand-bg/30 text-brand-text text-sm focus:outline-none"
                     >
+                      <option value="">Pilih tarif kerja sama</option>
                       <option value="Rp150.000">Rp150.000 / Post</option>
                       <option value="Rp250.000">Rp250.000 / Post</option>
                       <option value="Rp400.000">Rp400.000 / Post</option>

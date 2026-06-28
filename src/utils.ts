@@ -45,6 +45,7 @@ const toUser = (row: any): User => ({
   pricePerPost: row.price_per_post ?? row.pricePerPost,
   niche: Array.isArray(row.niche) ? row.niche : [],
   engagement: Number(row.engagement ?? 0),
+  description: row.description ?? row.desc ?? "",
   briefText: row.brief_text ?? row.briefText,
   influencers: row.influencers ?? [],
 });
@@ -147,6 +148,7 @@ const toSnakeUser = (row: Partial<User> | any) => ({
   price_per_post: row.price_per_post ?? row.pricePerPost,
   niche: row.niche,
   engagement: row.engagement,
+  description: row.description,
 });
 
 const toSnakeCampaign = (row: Partial<Campaign> | any) => ({
