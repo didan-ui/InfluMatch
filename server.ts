@@ -476,6 +476,24 @@ app.get("/api/escrow/:escrowId", async (req, res) => {
   }
 });
 
+app.put("/api/escrow/:escrowId", async (req, res) => {
+  const { escrowId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from("escrow_transactions")
+      .update(req.body)
+      .eq("id", escrowId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, message: "Escrow updated", escrow: data });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 app.post("/api/escrow/lock", async (req, res) => {
   const { campaignId, influencerId, amount } = req.body;
 

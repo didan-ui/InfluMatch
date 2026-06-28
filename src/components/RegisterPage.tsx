@@ -11,7 +11,7 @@ interface RegisterPageProps {
 }
 
 export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onNavigateToWelcome }: RegisterPageProps) {
-  const [role, setRole] = useState<UserRole>("umkm");
+  const [role, setRole] = useState<"umkm" | "influencer">("umkm");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

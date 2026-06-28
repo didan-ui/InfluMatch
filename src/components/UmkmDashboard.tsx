@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { User, Campaign, EscrowTx, SystemLog } from "../types";
-import { 
-  getDbCampaigns, 
-  getDbUsers, 
-  saveDbCampaign, 
-  getDbEscrow, 
-  saveDbEscrow, 
-  getDbLogs, 
-  addDbLog 
+import {
+  getDbCampaigns,
+  getDbUsers,
+  saveDbCampaign,
+  saveDbUser,
+  getDbEscrow,
+  saveDbEscrow,
+  getDbLogs,
+  addDbLog,
 } from "../utils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -66,22 +67,37 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   const [profileCity, setProfileCity] = useState(currentUser.city || "Malang");
   const [profileDesc, setProfileDesc] = useState("Warung lokal khas Nusantara dengan rasa berani & bumbu melimpah.");
   const [showProfileSuccess, setShowProfileSuccess] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<User>(currentUser);
 
-  // Sync details from localStorage
-  const forceRefresh = () => {
-    const allCampaigns = getDbCampaigns().filter(c => c.umkmId === currentUser.id);
-    const allUsers = getDbUsers().filter(u => u.role === "influencer" && u.isApproved);
-    const allEscrows = getDbEscrow().filter(e => allCampaigns.some(c => c.id === e.campaignId));
-    const allLogs = getDbLogs().filter(l => l.type === "umkm" || l.type === "admin");
-
-    setCampaigns(allCampaigns);
-    setInfluencers(allUsers);
-    setEscrows(allEscrows);
-    setLogs(allLogs);
+  const forceRefresh = async () => {
+    try {
+      const [allCampaigns, allUsers, allEscrows, allLogs] = await Promise.all([
+        getDbCampaigns(),
+        getDbUsers(),
+        getDbEscrow(),
+        getDbLogs(),
+      ]);
+      const filteredCampaigns = allCampaigns.filter(c => (c.umkm_id ?? c.umkmId) === currentUser.id);
+      const filteredUsers = allUsers.filter(u => u.role === "influencer" && u.id !== currentUser.id);
+      const filteredEscrows = allEscrows.filter(e => filteredCampaigns.some(c => (c.id) === (e.campaign_id ?? e.campaignId)));
+      const filteredLogs = allLogs.filter(l => l.actor_type === "umkm" || l.actor_type === "admin");
+      const profileMatch = allUsers.find(u => u.id === currentUser.id) ?? currentUser;
+      setActiveProfile(profileMatch);
+      setProfileName(profileMatch.name || currentUser.name);
+      setProfileBrand(profileMatch.brandName || "");
+      setProfileCategory(profileMatch.brandCategory || "Kuliner");
+      setProfileCity(profileMatch.city || "Malang");
+      setCampaigns(filteredCampaigns);
+      setInfluencers(filteredUsers);
+      setEscrows(filteredEscrows);
+      setLogs(filteredLogs);
+    } catch (error) {
+      console.error("Failed to refresh UMKM dashboard", error);
+    }
   };
 
   useEffect(() => {
-    forceRefresh();
+    void forceRefresh();
   }, [currentUser]);
 
   // Handle building dynamic Brief via Express server Gemini route
@@ -117,13 +133,13 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
 
         // Auto attach the brief if a campaign was selected
         if (selectedCampaignForBrief) {
-          const allCampaigns = getDbCampaigns();
+          const allCampaigns = await getDbCampaigns();
           const target = allCampaigns.find(c => c.id === selectedCampaignForBrief);
           if (target) {
-            target.briefText = data.brief;
-            saveDbCampaign(target);
-            addDbLog(currentUser.name, "AI Brief", `AI Brief ditautkan ke campaign ${target.name}`, "umkm");
-            forceRefresh();
+            const updatedTarget = { ...target, briefText: data.brief, brief_text: data.brief };
+            await saveDbCampaign(updatedTarget);
+            await addDbLog(currentUser.name, "AI Brief", `AI Brief ditautkan ke campaign ${target.name}`, "umkm");
+            await forceRefresh();
           }
         }
       } else {
@@ -138,160 +154,206 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   };
 
   // Handle adding new custom campaigns
-  const handleCreateCampaign = (e: React.FormEvent) => {
+  const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCampaignName) return;
 
-    const newCamp: Campaign = {
-      id: "camp-" + Date.now(),
-      name: newCampaignName,
-      umkmId: currentUser.id,
-      umkmName: currentUser.brandName || currentUser.name,
-      category: newCampaignCategory,
-      description: newCampaignDesc || "Tidak ada deskripsi rinci.",
-      budget: Number(newCampaignBudget),
-      platform: newCampaignPlatform,
-      objective: "Brand Awareness",
-      audience: "Mahasiswa",
-      tone: "Fun & Casual",
-      status: "waiting",
-      createdAt: new Date().toISOString().split('T')[0],
-      influencers: []
-    };
+    try {
+      const newCamp: Campaign = {
+        id: "camp-" + Date.now(),
+        name: newCampaignName,
+        umkm_id: currentUser.id,
+        umkmId: currentUser.id,
+        umkm_name: currentUser.brandName || currentUser.name,
+        umkmName: currentUser.brandName || currentUser.name,
+        category: newCampaignCategory,
+        description: newCampaignDesc || "Tidak ada deskripsi rinci.",
+        budget: Number(newCampaignBudget),
+        platform: newCampaignPlatform,
+        objective: "Brand Awareness",
+        audience: "Mahasiswa",
+        tone: "Fun & Casual",
+        status: "waiting",
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        influencers: [],
+      };
 
-    saveDbCampaign(newCamp);
-    addDbLog(currentUser.name, "Membuat Campaign", `UMKM membuat campaign baru "${newCampaignName}"`, "umkm");
-    
-    // reset form
-    setNewCampaignName("");
-    setNewCampaignDesc("");
-    setShowCreateModal(false);
-    forceRefresh();
+      await saveDbCampaign(newCamp);
+      await addDbLog(currentUser.name, "Membuat Campaign", `UMKM membuat campaign baru "${newCampaignName}"`, "umkm");
+      setNewCampaignName("");
+      setNewCampaignDesc("");
+      setShowCreateModal(false);
+      await forceRefresh();
+    } catch (error) {
+      console.error("Failed to create campaign", error);
+    }
   };
 
   // Execute Invitation
-  const triggerInvite = (e: React.FormEvent) => {
+  const triggerInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetInfluencerToInvite || !selectedCampaignForInvite) return;
 
-    const allCampaigns = getDbCampaigns();
-    const camp = allCampaigns.find(c => c.id === selectedCampaignForInvite);
-    if (camp) {
-      // Check if already invited
-      if (camp.influencers.some(i => i.influencerId === targetInfluencerToInvite.id)) {
-        alert(`${targetInfluencerToInvite.name} sudah tergabung/diundang dalam campaign ini.`);
-        return;
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === selectedCampaignForInvite);
+      if (camp) {
+        const influencers = camp.influencers || [];
+        if (influencers.some(i => (i.influencer_id ?? i.influencerId) === targetInfluencerToInvite.id)) {
+          alert(`${targetInfluencerToInvite.name} sudah tergabung/diundang dalam campaign ini.`);
+          return;
+        }
+
+        influencers.push({
+          id: `ci-${Date.now()}`,
+          campaign_id: camp.id,
+          campaignId: camp.id,
+          influencer_id: targetInfluencerToInvite.id,
+          influencerId: targetInfluencerToInvite.id,
+          influencer_name: targetInfluencerToInvite.name,
+          influencerName: targetInfluencerToInvite.name,
+          status: "invited",
+          escrow_released: false,
+          escrowReleased: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        camp.influencers = influencers;
+        if (camp.status === "waiting") {
+          camp.status = "active";
+        }
+
+        await saveDbCampaign(camp);
+
+        const newEscrowDraft: EscrowTx = {
+          id: "tx-" + Date.now(),
+          campaign_id: camp.id,
+          campaignId: camp.id,
+          campaign_name: camp.name,
+          campaignName: camp.name,
+          influencer_id: targetInfluencerToInvite.id,
+          influencerId: targetInfluencerToInvite.id,
+          influencer_name: targetInfluencerToInvite.name,
+          influencerName: targetInfluencerToInvite.name,
+          umkm_id: currentUser.id,
+          umkmId: currentUser.id,
+          amount: camp.budget,
+          status: "pending",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await saveDbEscrow(newEscrowDraft);
+        await addDbLog(currentUser.name, "Undangan Influencer", `Mengundang ${targetInfluencerToInvite.name} ke campaign "${camp.name}"`, "umkm");
+        setShowInviteModal(false);
+        setTargetInfluencerToInvite(null);
+        setSelectedCampaignForInvite("");
+        await forceRefresh();
+        alert(`Undangan berhasil dikirim ke ${targetInfluencerToInvite.name}! Status: Menunggu respon.`);
       }
-
-      // Add invite
-      camp.influencers.push({
-        influencerId: targetInfluencerToInvite.id,
-        influencerName: targetInfluencerToInvite.name,
-        status: "invited"
-      });
-
-      // Update status if it was waiting
-      if (camp.status === "waiting") {
-        camp.status = "active";
-      }
-
-      saveDbCampaign(camp);
-
-      // Create raw escrow transaction draft
-      const newEscrowDraft: EscrowTx = {
-        id: "tx-" + Date.now(),
-        date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }),
-        campaignId: camp.id,
-        campaignName: camp.name,
-        influencerId: targetInfluencerToInvite.id,
-        influencerName: targetInfluencerToInvite.name,
-        amount: camp.budget,
-        status: "pending"
-      };
-      saveDbEscrow(newEscrowDraft);
-
-      addDbLog(currentUser.name, "Undangan Influencer", `Mengundang ${targetInfluencerToInvite.name} ke campaign "${camp.name}"`, "umkm");
-      
-      setShowInviteModal(false);
-      setTargetInfluencerToInvite(null);
-      setSelectedCampaignForInvite("");
-      forceRefresh();
-      alert(`Undangan berhasil dikirim ke ${targetInfluencerToInvite.name}! Status: Menunggu respon.`);
+    } catch (error) {
+      console.error("Failed to invite influencer", error);
     }
   };
 
   // Release Escrow payment
-  const handleReleaseEscrow = (txId: string, campaignId: string, influencerId: string) => {
-    const allEscrows = getDbEscrow();
-    const tx = allEscrows.find(e => e.id === txId);
-    if (tx) {
-      tx.status = "released";
-      saveDbEscrow(tx);
+  const handleReleaseEscrow = async (txId: string, campaignId: string, influencerId: string) => {
+    try {
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.id === txId);
+      if (tx) {
+        await saveDbEscrow({ ...tx, status: "released" });
 
-      // Update campaign influencer milestone status to 'completed'
-      const allCampaigns = getDbCampaigns();
-      const camp = allCampaigns.find(c => c.id === campaignId);
-      if (camp) {
-        const inf = camp.influencers.find(i => i.influencerId === influencerId);
-        if (inf) {
-          inf.status = "completed";
-          inf.escrowReleased = true;
+        const allCampaigns = await getDbCampaigns();
+        const camp = allCampaigns.find(c => c.id === campaignId);
+        if (camp) {
+          const influencers = camp.influencers || [];
+          const inf = influencers.find(i => (i.influencer_id ?? i.influencerId) === influencerId);
+          if (inf) {
+            inf.status = "completed";
+            inf.escrowReleased = true;
+            inf.escrow_released = true;
+          }
+          if (influencers.every(i => i.status === "completed")) {
+            camp.status = "completed";
+          }
+          await saveDbCampaign(camp);
         }
-        // If all completed, campaign status becomes completed!
-        if (camp.influencers.every(i => i.status === "completed")) {
-          camp.status = "completed";
-        }
-        saveDbCampaign(camp);
+
+        await addDbLog(currentUser.name, "Persetujuan Escrow", `Melepaskan dana escrow Rp${tx.amount.toLocaleString()} ke ${tx.influencer_name ?? tx.influencerName}`, "umkm");
+        await forceRefresh();
+        alert("Pembayaran berhasil dicairkan! Terimakasih telah bekerja sama.");
       }
-
-      addDbLog(currentUser.name, "Persetujuan Escrow", `Melepaskan dana escrow Rp${tx.amount.toLocaleString()} ke ${tx.influencerName}`, "umkm");
-      forceRefresh();
-      alert("Pembayaran berhasil dicairkan! Terimakasih telah bekerja sama.");
+    } catch (error) {
+      console.error("Failed to release escrow", error);
     }
   };
 
   // Lock Escrow / Bayar Ke Rekening Escrow Pertama
-  const handleLockEscrow = (txId: string, campaignId: string, influencerId: string) => {
-    const allEscrows = getDbEscrow();
-    const tx = allEscrows.find(e => e.id === txId);
-    if (tx) {
-      tx.status = "locked";
-      saveDbEscrow(tx);
+  const handleLockEscrow = async (txId: string, campaignId: string, influencerId: string) => {
+    try {
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.id === txId);
+      if (tx) {
+        await saveDbEscrow({ ...tx, status: "locked" });
 
-      // Update campaign influencer milestone to 'escrow_locked'
-      const allCampaigns = getDbCampaigns();
-      const camp = allCampaigns.find(c => c.id === campaignId);
-      if (camp) {
-        const inf = camp.influencers.find(i => i.influencerId === influencerId);
-        if (inf) {
-          inf.status = "escrow_locked";
+        const allCampaigns = await getDbCampaigns();
+        const camp = allCampaigns.find(c => c.id === campaignId);
+        if (camp) {
+          const influencers = camp.influencers || [];
+          const inf = influencers.find(i => (i.influencer_id ?? i.influencerId) === influencerId);
+          if (inf) {
+            inf.status = "escrow_locked";
+          }
+          await saveDbCampaign(camp);
         }
-        saveDbCampaign(camp);
-      }
 
-      addDbLog(currentUser.name, "Escrow Terkunci", `Mengirim dana iklan Rp${tx.amount.toLocaleString()} ke penampungan Escrow Sistem`, "umkm");
-      forceRefresh();
-      alert("Dana telah berhasil diamankan di rekening Escrow InfluMatch! Influencer telah diberitahu untuk segera mengunggah/membuat konten.");
+        await addDbLog(currentUser.name, "Escrow Terkunci", `Mengirim dana iklan Rp${tx.amount.toLocaleString()} ke penampungan Escrow Sistem`, "umkm");
+        await forceRefresh();
+        alert("Dana telah berhasil diamankan di rekening Escrow InfluMatch! Influencer telah diberitahu untuk segera mengunggah/membuat konten.");
+      }
+    } catch (error) {
+      console.error("Failed to lock escrow", error);
     }
   };
 
   // Update Profile Info
-  const handleUpdateProfile = (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const allUsers = getDbUsers();
-    const index = allUsers.findIndex(u => u.id === currentUser.id);
-    if (index > -1) {
-      allUsers[index].name = profileName;
-      allUsers[index].brandName = profileBrand;
-      allUsers[index].brandCategory = profileCategory;
-      allUsers[index].city = profileCity;
-      localStorage.setItem("im_users", JSON.stringify(allUsers));
-      
-      addDbLog(currentUser.name, "Update Profil", "Mengubah informasi profil UMKM", "umkm");
-      setShowProfileSuccess(true);
-      setTimeout(() => setShowProfileSuccess(false), 2500);
+    try {
+      const allUsers = await getDbUsers();
+      const index = allUsers.findIndex(u => u.id === currentUser.id);
+      if (index > -1) {
+        const updatedUser = {
+          ...allUsers[index],
+          name: profileName,
+          brandName: profileBrand,
+          brand_name: profileBrand,
+          brandCategory: profileCategory,
+          brand_category: profileCategory,
+          city: profileCity,
+        };
+        await saveDbUser(updatedUser);
+        await addDbLog(currentUser.name, "Update Profil", "Mengubah informasi profil UMKM", "umkm");
+        setShowProfileSuccess(true);
+        setTimeout(() => setShowProfileSuccess(false), 2500);
+      }
+    } catch (error) {
+      console.error("Failed to update profile", error);
     }
   };
+
+  const totalAudience = influencers.reduce((sum, inf) => sum + (inf.followersNum || 0), 0);
+  const audienceLabel = totalAudience >= 1000
+    ? `${(totalAudience / 1000).toFixed(totalAudience >= 10000 ? 0 : 1)}K`
+    : `${totalAudience}`;
+  const activeCampaignCount = campaigns.filter(c => c.status === "active").length;
+  const totalEscrowValue = escrows.reduce((sum, tx) => sum + tx.amount, 0);
+  const releasedEscrowValue = escrows.filter(e => e.status === "released").reduce((sum, tx) => sum + tx.amount, 0);
+  const matchScore = Math.min(99, 84 + campaigns.length * 2 + Math.max(0, influencers.length - 1) + (releasedEscrowValue > 0 ? 3 : 0));
+  const recentLogs = logs.slice(0, 4);
 
   // Filter influencers for discover page
   const filteredInfluencers = influencers.filter(inf => {
@@ -324,8 +386,8 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
               UM
             </div>
             <div>
-              <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{currentUser.brandName || "Ayam Geprek Budi"}</h3>
-              <p className="text-[11px] text-brand-text-light font-medium tracking-tight uppercase mt-0.5">Kategori {profileCategory}</p>
+              <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{activeProfile.brandName || activeProfile.name || currentUser.brandName || "UMKM"}</h3>
+              <p className="text-[11px] text-brand-text-light font-medium tracking-tight uppercase mt-0.5">Kategori {profileCategory || activeProfile.brandCategory || "Kuliner"}</p>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between">
@@ -394,7 +456,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                     🚀 Halaman Pemilik Usaha
                   </span>
                   <h1 className="font-serif text-3xl lg:text-4xl font-normal tracking-tight mt-3 text-brand-text">
-                    Membantu Maju {currentUser.brandName || "UMKM Lokal"}
+                    Membantu Maju {activeProfile.brandName || activeProfile.name || currentUser.brandName || "UMKM Lokal"}
                   </h1>
                   <p className="text-brand-text-soft text-xs max-w-lg leading-relaxed">
                     Hubungkan usaha kuliner, fashion, atau gaya hidup Anda dengan influencer mahasiswa kreatif di Malang. Gunakan bantuan AI pintar untuk membuat arahan promosi Anda secara otomatis.
@@ -403,12 +465,12 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
 
                 <div className="relative z-10 flex gap-8 pt-6 border-t border-brand-sage-dark/20 mt-4">
                   <div>
-                    <div className="text-2xl font-black text-brand-sage-dark">{campaigns.length}</div>
+                    <div className="text-2xl font-black text-brand-sage-dark">{activeCampaignCount}</div>
                     <div className="text-[10px] text-brand-text-soft uppercase tracking-wide font-medium">Promosi Aktif</div>
                   </div>
                   <div className="w-px h-8 bg-brand-sand"></div>
                   <div>
-                    <div className="text-2xl font-black text-brand-sage-dark">96.8%</div>
+                    <div className="text-2xl font-black text-brand-sage-dark">{matchScore}%</div>
                     <div className="text-[10px] text-brand-text-soft uppercase tracking-wide font-medium">Tingkat Kecocokan AI</div>
                   </div>
                 </div>
@@ -452,10 +514,10 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
             {/* Platform summary stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "KAMPANYE ANDA", value: campaigns.length, sub: `${campaigns.filter(c => c.status === "active").length} Sedang Berjalan` },
-                { label: "POTENSI PENONTON", value: "28.4K", sub: "Mahasiswa Aktif" },
-                { label: "AKURASI MATCHING", value: "96.4%", sub: "Sistem Rekomendasi" },
-                { label: "KENAIKAN TRANSAKSI", value: "+18.2%", sub: "Rata-rata Mitra Kami" }
+                { label: "KAMPANYE ANDA", value: campaigns.length, sub: `${activeCampaignCount} Sedang Berjalan` },
+                { label: "POTENSI PENONTON", value: audienceLabel, sub: `${influencers.length} influencer terverifikasi` },
+                { label: "AKURASI MATCHING", value: `${matchScore}%`, sub: "Berdasarkan kampanye & influencer" },
+                { label: "DANA TERKUNCI", value: `Rp${totalEscrowValue.toLocaleString()}`, sub: "Total nilai escrow aktif" }
               ].map((stat, i) => (
                 <div key={i} className="bg-brand-white border border-brand-sand rounded-2xl p-5 shadow-xs">
                   <p className="text-[9px] font-bold text-brand-text-light uppercase tracking-widest">{stat.label}</p>
@@ -477,15 +539,15 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                 </div>
                 
                 <div className="divide-y divide-brand-sand/50">
-                  {logs.slice(0, 4).map((log) => (
+                  {recentLogs.map((log) => (
                     <div key={log.id} className="py-3.5 flex items-start gap-3">
                       <div className="w-2.5 h-2.5 rounded-full bg-brand-sage-dark shrink-0 mt-1.5" />
                       <div>
                         <p className="text-xs text-brand-text-soft">
-                          <span className="font-bold text-brand-text">{log.actor}</span>: {log.details}
+                          <span className="font-bold text-brand-text">{log.actor_name || log.actorName || log.actor || "Sistem"}</span>: {log.details}
                         </p>
                         <span className="text-[10px] text-brand-text-light font-mono block mt-0.5">
-                          {new Date(log.date).toLocaleTimeString()}
+                          {new Date(log.date || log.created_at).toLocaleTimeString()}
                         </span>
                       </div>
                     </div>
@@ -532,7 +594,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                         }`}>
                           {camp.status.toUpperCase()}
                         </span>
-                        <p className="text-[10px] text-brand-text-light mt-1">{camp.influencers.length} influencer</p>
+                        <p className="text-[10px] text-brand-text-light mt-1">{(camp.influencers?.length ?? 0)} influencer</p>
                       </div>
                     </div>
                   ))}
@@ -783,13 +845,13 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                         <td className="py-3.5 px-4 font-bold">{camp.name}</td>
                         <td className="py-3.5 px-4"><span className="px-2 py-0.5 rounded-md bg-brand-bg border border-brand-sand/65 text-[10px] font-bold">{camp.platform}</span></td>
                         <td className="py-3.5 px-4 text-brand-text-soft">
-                          {camp.influencers.length > 0 
-                            ? camp.influencers.map(i => i.influencerName).join(", ") 
+                          {(camp.influencers?.length ?? 0) > 0
+                            ? camp.influencers?.map(i => i.influencerName).join(", ")
                             : "Belum ada undangan"
                           }
                         </td>
                         <td className="py-3.5 px-4 font-mono font-semibold">
-                          {camp.influencers.length > 0 ? `${(camp.influencers.length * 7.5).toFixed(1)}K` : "—"}
+                          {(camp.influencers?.length ?? 0) > 0 ? `${((camp.influencers?.length ?? 0) * 7.5).toFixed(1)}K` : "—"}
                         </td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wide ${

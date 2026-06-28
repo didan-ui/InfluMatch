@@ -1,322 +1,258 @@
-import { User, Campaign, EscrowTx, SystemLog } from "./types";
+import { User, Campaign, EscrowTx, SystemLog, CampaignInfluencer } from "./types";
 
-// Seed data
-export const DEFAULT_USERS: User[] = [
-  {
-    id: "umkm-1",
-    email: "budi@umkm.com",
-    name: "Pak Budi",
-    role: "umkm",
-    brandName: "Ayam Geprek Pak Budi",
-    brandCategory: "Kuliner",
-    city: "Malang",
-    isApproved: true,
-    avatarUrl: "PB"
-  },
-  {
-    id: "inf-1",
-    email: "siska@influencer.com",
-    name: "Siska Rahayu",
-    role: "influencer",
-    handle: "@siskarahayu",
-    followers: "5.1K",
-    followersNum: 5100,
-    pricePerPost: "Rp250.000",
-    niche: ["Kuliner", "Lifestyle"],
-    city: "Malang",
-    isApproved: true,
-    avatarUrl: "SR",
-    engagement: "8.2%",
-    rating: 4.9
-  },
-  {
-    id: "inf-2",
-    email: "andi@influencer.com",
-    name: "Andi Pratama",
-    role: "influencer",
-    handle: "@andipratama",
-    followers: "7.8K",
-    followersNum: 7800,
-    pricePerPost: "Rp350.000",
-    niche: ["Fashion", "Lifestyle"],
-    city: "Malang",
-    isApproved: true,
-    avatarUrl: "AP",
-    engagement: "6.5%",
-    rating: 4.7
-  },
-  {
-    id: "inf-3",
-    email: "nadia@influencer.com",
-    name: "Nadia Kirana",
-    role: "influencer",
-    handle: "@nadiakirana",
-    followers: "12K",
-    followersNum: 12000,
-    pricePerPost: "Rp500.000",
-    niche: ["Kecantikan"],
-    city: "Surabaya",
-    isApproved: true,
-    avatarUrl: "NK",
-    engagement: "7.9%",
-    rating: 4.8
-  },
-  {
-    id: "inf-4",
-    email: "dimas@influencer.com",
-    name: "Dimas Kurniawan",
-    role: "influencer",
-    handle: "@dimaskurnia",
-    followers: "9.4K",
-    followersNum: 9400,
-    pricePerPost: "Rp400.000",
-    niche: ["Kuliner"],
-    city: "Malang",
-    isApproved: true,
-    avatarUrl: "DK",
-    engagement: "9.1%",
-    rating: 4.9
-  },
-  {
-    id: "admin-1",
-    email: "admin@influmatch.com",
-    name: "Admin Utama",
-    role: "admin",
-    isApproved: true,
-    avatarUrl: "AD"
+const API_BASE = "/api";
+
+const requestJson = async (path: string, options: RequestInit = {}) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || "Request failed");
   }
-];
 
-export const DEFAULT_CAMPAIGNS: Campaign[] = [
-  {
-    id: "camp-1",
-    name: "Promo Geprek Lava",
-    umkmId: "umkm-1",
-    umkmName: "Ayam Geprek Pak Budi",
-    category: "Kuliner",
-    description: "Memperkenalkan menu andalan super pedas Geprek Lava kepada mahasiswa lokal.",
-    budget: 450000,
-    platform: "TikTok",
-    objective: "Brand Awareness",
-    audience: "Mahasiswa",
-    tone: "Fun & Casual",
-    status: "active",
-    createdAt: "2026-05-10",
-    briefText: `### 🌟 BRIEF: Promo Geprek Lava\n\n**Do's:** Tampilkan keju leleh di atas ayam geprek secara estetik dan dramatis.\n\n**Don'ts:** Jangan membandingkan kepedasan geprek kita dengan kompetitor.`,
-    influencers: [
-      {
-        influencerId: "inf-1",
-        influencerName: "Siska Rahayu",
-        status: "escrow_locked"
-      },
-      {
-        influencerId: "inf-4",
-        influencerName: "Dimas Kurniawan",
-        status: "content_uploaded",
-        submissionUrl: "https://tiktok.com/@dimaskurnia/video/73821092812"
-      }
-    ]
-  },
-  {
-    id: "camp-2",
-    name: "Menu Pedas Baru",
-    umkmId: "umkm-1",
-    umkmName: "Ayam Geprek Pak Budi",
-    category: "Kuliner",
-    description: "Meningkatkan penjualan menu geprek sambal matah.",
-    budget: 700000,
-    platform: "Instagram",
-    objective: "Penjualan",
-    audience: "Mahasiswa",
-    tone: "Friendly",
-    status: "waiting",
-    createdAt: "2026-05-20",
-    influencers: [
-      {
-        influencerId: "inf-1",
-        influencerName: "Siska Rahayu",
-        status: "invited"
-      }
-    ]
-  },
-  {
-    id: "camp-3",
-    name: "Midnight Combo",
-    umkmId: "umkm-1",
-    umkmName: "Ayam Geprek Pak Budi",
-    category: "Kuliner",
-    description: "Promo akhir bulan khusus mahasiswa diskon 30% setelah jam 9 malam.",
-    budget: 300000,
-    platform: "TikTok",
-    objective: "Engagement",
-    audience: "Mahasiswa",
-    tone: "Friendly",
-    status: "completed",
-    createdAt: "2026-04-28",
-    briefText: "Review jajanan hemat malam hari.",
-    influencers: [
-      {
-        influencerId: "inf-4",
-        influencerName: "Dimas Kurniawan",
-        status: "completed",
-        submissionUrl: "https://tiktok.com/@dimaskurnia/video/72120381023",
-        escrowReleased: true
-      }
-    ]
+  return data;
+};
+
+const toUser = (row: any): User => ({
+  id: row.id,
+  email: row.email,
+  name: row.name,
+  role: row.role,
+  avatar_url: row.avatar_url ?? row.avatarUrl,
+  avatarUrl: row.avatar_url ?? row.avatarUrl,
+  city: row.city,
+  is_approved: row.is_approved ?? row.isApproved ?? false,
+  isApproved: row.is_approved ?? row.isApproved ?? false,
+  rating: Number(row.rating ?? 0),
+  created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  updated_at: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  brand_name: row.brand_name ?? row.brandName,
+  brandName: row.brand_name ?? row.brandName,
+  brand_category: row.brand_category ?? row.brandCategory,
+  brandCategory: row.brand_category ?? row.brandCategory,
+  handle: row.handle,
+  followers: row.followers_num ? `${(Number(row.followers_num) / 1000).toFixed(Number(row.followers_num) >= 10000 ? 0 : 1)}K` : row.followers,
+  followersNum: Number(row.followers_num ?? row.followersNum ?? 0),
+  price_per_post: Number(row.price_per_post ?? row.pricePerPost ?? 0),
+  pricePerPost: row.price_per_post ?? row.pricePerPost,
+  niche: Array.isArray(row.niche) ? row.niche : [],
+  engagement: Number(row.engagement ?? 0),
+  briefText: row.brief_text ?? row.briefText,
+  influencers: row.influencers ?? [],
+});
+
+const toCampaignInfluencer = (row: any): CampaignInfluencer => ({
+  id: row.id,
+  campaign_id: row.campaign_id ?? row.campaignId,
+  campaignId: row.campaign_id ?? row.campaignId,
+  influencer_id: row.influencer_id ?? row.influencerId,
+  influencerId: row.influencer_id ?? row.influencerId,
+  influencer_name: row.influencer_name ?? row.influencerName ?? "",
+  influencerName: row.influencer_name ?? row.influencerName ?? "",
+  status: row.status ?? "invited",
+  submission_url: row.submission_url ?? row.submissionUrl,
+  submissionUrl: row.submission_url ?? row.submissionUrl,
+  escrow_released: Boolean(row.escrow_released ?? row.escrowReleased ?? false),
+  escrowReleased: Boolean(row.escrow_released ?? row.escrowReleased ?? false),
+  created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  updated_at: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+});
+
+const toCampaign = (row: any): Campaign => ({
+  id: row.id,
+  name: row.name,
+  umkm_id: row.umkm_id ?? row.umkmId,
+  umkmId: row.umkm_id ?? row.umkmId,
+  umkm_name: row.umkm_name ?? row.umkmName ?? "",
+  umkmName: row.umkm_name ?? row.umkmName ?? "",
+  category: row.category,
+  description: row.description ?? "",
+  budget: Number(row.budget ?? 0),
+  platform: row.platform ?? "",
+  brief_text: row.brief_text ?? row.briefText,
+  briefText: row.brief_text ?? row.briefText,
+  objective: row.objective ?? "",
+  audience: row.audience ?? "",
+  tone: row.tone ?? "",
+  status: row.status ?? "waiting",
+  campaign_influencers: Array.isArray(row.campaign_influencers) ? row.campaign_influencers.map(toCampaignInfluencer) : [],
+  influencers: Array.isArray(row.campaign_influencers) ? row.campaign_influencers.map(toCampaignInfluencer) : [],
+  created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  updated_at: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+});
+
+const toEscrow = (row: any): EscrowTx => ({
+  id: row.id,
+  campaign_id: row.campaign_id ?? row.campaignId,
+  campaignId: row.campaign_id ?? row.campaignId,
+  campaign_name: row.campaign_name ?? row.campaignName ?? "",
+  campaignName: row.campaign_name ?? row.campaignName ?? "",
+  influencer_id: row.influencer_id ?? row.influencerId,
+  influencerId: row.influencer_id ?? row.influencerId,
+  influencer_name: row.influencer_name ?? row.influencerName ?? "",
+  influencerName: row.influencer_name ?? row.influencerName ?? "",
+  umkm_id: row.umkm_id ?? row.umkmId,
+  umkmId: row.umkm_id ?? row.umkmId,
+  amount: Number(row.amount ?? 0),
+  status: row.status ?? "pending",
+  created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  updated_at: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  updatedAt: row.updated_at ?? row.updatedAt ?? new Date().toISOString(),
+  date: row.date ?? (row.created_at ? new Date(row.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : ""),
+});
+
+const toLog = (row: any): SystemLog => ({
+  id: row.id,
+  actor_id: row.actor_id ?? row.actorId,
+  actorId: row.actor_id ?? row.actorId,
+  actor_name: row.actor_name ?? row.actorName ?? "",
+  actorName: row.actor_name ?? row.actorName ?? "",
+  actor: row.actor_name ?? row.actorName ?? "",
+  action: row.action ?? "",
+  details: row.details ?? "",
+  actor_type: row.actor_type ?? row.actorType ?? "admin",
+  actorType: row.actor_type ?? row.actorType ?? "admin",
+  type: row.actor_type ?? row.actorType ?? "admin",
+  created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  createdAt: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+  date: row.date ?? row.created_at ?? new Date().toISOString(),
+});
+
+const toSnakeUser = (row: Partial<User> | any) => ({
+  id: row.id,
+  email: row.email,
+  name: row.name,
+  role: row.role,
+  avatar_url: row.avatar_url ?? row.avatarUrl,
+  city: row.city,
+  is_approved: row.is_approved ?? row.isApproved,
+  rating: row.rating,
+  brand_name: row.brand_name ?? row.brandName,
+  brand_category: row.brand_category ?? row.brandCategory,
+  handle: row.handle,
+  followers_num: row.followers_num ?? row.followersNum,
+  price_per_post: row.price_per_post ?? row.pricePerPost,
+  niche: row.niche,
+  engagement: row.engagement,
+});
+
+const toSnakeCampaign = (row: Partial<Campaign> | any) => ({
+  id: row.id,
+  name: row.name,
+  umkm_id: row.umkm_id ?? row.umkmId,
+  umkm_name: row.umkm_name ?? row.umkmName,
+  category: row.category,
+  description: row.description,
+  objective: row.objective,
+  audience: row.audience,
+  platform: row.platform,
+  tone: row.tone,
+  budget: row.budget,
+  brief_text: row.brief_text ?? row.briefText,
+  status: row.status,
+});
+
+const toSnakeEscrow = (row: Partial<EscrowTx> | any) => ({
+  id: row.id,
+  campaign_id: row.campaign_id ?? row.campaignId,
+  campaign_name: row.campaign_name ?? row.campaignName,
+  influencer_id: row.influencer_id ?? row.influencerId,
+  influencer_name: row.influencer_name ?? row.influencerName,
+  umkm_id: row.umkm_id ?? row.umkmId,
+  amount: row.amount,
+  status: row.status,
+});
+
+export const getDbUsers = async (): Promise<User[]> => {
+  const response = await requestJson("/users", { method: "GET" });
+  return (response.users || []).map(toUser);
+};
+
+export const saveDbUser = async (user: User): Promise<User> => {
+  const payload = toSnakeUser(user);
+  const endpoint = user.id && !String(user.id).startsWith("temp-") ? `/auth/users/${user.id}` : "/auth/register";
+  const method = user.id && !String(user.id).startsWith("temp-") ? "PUT" : "POST";
+  const response = await requestJson(endpoint, {
+    method,
+    body: JSON.stringify(payload),
+  });
+  return toUser(response.user);
+};
+
+export const getDbCampaigns = async (): Promise<Campaign[]> => {
+  const response = await requestJson("/campaigns", { method: "GET" });
+  return (response.campaigns || []).map(toCampaign);
+};
+
+export const saveDbCampaign = async (campaign: Campaign): Promise<Campaign> => {
+  const payload = toSnakeCampaign(campaign);
+  const isNewCampaign = typeof campaign.id === "string" && campaign.id.startsWith("camp-");
+  const response = await requestJson(isNewCampaign ? "/campaigns" : `/campaigns/${campaign.id}`, {
+    method: isNewCampaign ? "POST" : "PUT",
+    body: JSON.stringify(payload),
+  });
+  return toCampaign(response.campaign);
+};
+
+export const getDbEscrow = async (): Promise<EscrowTx[]> => {
+  const response = await requestJson("/escrow", { method: "GET" });
+  return (response.escrows || []).map(toEscrow);
+};
+
+export const saveDbEscrow = async (tx: EscrowTx): Promise<EscrowTx> => {
+  if (tx.status === "released") {
+    const response = await requestJson(`/escrow/${tx.id}/release`, { method: "POST" });
+    return toEscrow(response.escrow);
   }
-];
 
-export const DEFAULT_ESCROW: EscrowTx[] = [
-  {
-    id: "tx-1",
-    date: "12 Mei 2026",
-    campaignId: "camp-3",
-    campaignName: "Midnight Combo",
-    influencerId: "inf-4",
-    influencerName: "Dimas Kurniawan",
-    amount: 300000,
-    status: "released"
-  },
-  {
-    id: "tx-2",
-    date: "15 Mei 2026",
-    campaignId: "camp-1",
-    campaignName: "Promo Geprek Lava",
-    influencerId: "inf-1",
-    influencerName: "Siska Rahayu",
-    amount: 450000,
-    status: "locked"
-  },
-  {
-    id: "tx-3",
-    date: "22 Mei 2026",
-    campaignId: "camp-1",
-    campaignName: "Promo Geprek Lava",
-    influencerId: "inf-4",
-    influencerName: "Dimas Kurniawan",
-    amount: 450000,
-    status: "pending"
+  if (tx.id && !String(tx.id).startsWith("tx-")) {
+    const response = await requestJson(`/escrow/${tx.id}`, {
+      method: "PUT",
+      body: JSON.stringify(toSnakeEscrow(tx)),
+    });
+    return toEscrow(response.escrow);
   }
-];
 
-export const DEFAULT_LOGS: SystemLog[] = [
-  {
-    id: "log-1",
-    date: "2026-06-01T10:30:12Z",
-    actor: "Pak Budi",
-    action: "Membuat Campaign",
-    details: "Membuat campaign 'Promo Geprek Lava' dengan budget Rp450.000",
-    type: "umkm"
-  },
-  {
-    id: "log-2",
-    date: "2026-06-01T12:00:24Z",
-    actor: "Siska Rahayu",
-    action: "Menerima Undangan",
-    details: "Siska menyetujui invitation dari Ayam Geprek Pak Budi",
-    type: "influencer"
-  },
-  {
-    id: "log-3",
-    date: "2026-06-02T03:15:00Z",
-    actor: "Admin Utama",
-    action: "Pelepasan Escrow",
-    details: "Dana escrow sebesar Rp300.000 dilepaskan ke Dimas Kurniawan",
-    type: "admin"
-  }
-];
+  const response = await requestJson("/escrow/lock", {
+    method: "POST",
+    body: JSON.stringify({
+      campaignId: tx.campaign_id ?? tx.campaignId,
+      influencerId: tx.influencer_id ?? tx.influencerId,
+      amount: tx.amount,
+    }),
+  });
+  return toEscrow(response.escrow);
+};
 
-export function getDbUsers(): User[] {
-  const users = localStorage.getItem("im_users");
-  if (!users) {
-    localStorage.setItem("im_users", JSON.stringify(DEFAULT_USERS));
-    return DEFAULT_USERS;
-  }
-  return JSON.parse(users);
-}
+export const getDbLogs = async (): Promise<SystemLog[]> => {
+  const response = await requestJson("/logs", { method: "GET" });
+  return (response.logs || []).map(toLog);
+};
 
-export function saveDbUser(user: User) {
-  const users = getDbUsers();
-  const existingIndex = users.findIndex(u => u.id === user.id);
-  if (existingIndex > -1) {
-    users[existingIndex] = user;
-  } else {
-    users.push(user);
-  }
-  localStorage.setItem("im_users", JSON.stringify(users));
-}
+export const addDbLog = async (actor: string, action: string, details: string, type: "umkm" | "influencer" | "admin") => {
+  const response = await requestJson("/logs", {
+    method: "POST",
+    body: JSON.stringify({ action, details, actorType: type, actorName: actor }),
+  });
+  return toLog(response.log);
+};
 
-export function getDbCampaigns(): Campaign[] {
-  const camps = localStorage.getItem("im_campaigns");
-  if (!camps) {
-    localStorage.setItem("im_campaigns", JSON.stringify(DEFAULT_CAMPAIGNS));
-    return DEFAULT_CAMPAIGNS;
-  }
-  return JSON.parse(camps);
-}
+export const resetDatabase = async () => true;
 
-export function saveDbCampaign(campaign: Campaign) {
-  const camps = getDbCampaigns();
-  const existingIndex = camps.findIndex(c => c.id === campaign.id);
-  if (existingIndex > -1) {
-    camps[existingIndex] = campaign;
-  } else {
-    camps.push(campaign);
-  }
-  localStorage.setItem("im_campaigns", JSON.stringify(camps));
-}
-
-export function getDbEscrow(): EscrowTx[] {
-  const esc = localStorage.getItem("im_escrow");
-  if (!esc) {
-    localStorage.setItem("im_escrow", JSON.stringify(DEFAULT_ESCROW));
-    return DEFAULT_ESCROW;
-  }
-  return JSON.parse(esc);
-}
-
-export function saveDbEscrow(tx: EscrowTx) {
-  const escRows = getDbEscrow();
-  const existingIdx = escRows.findIndex(e => e.id === tx.id);
-  if (existingIdx > -1) {
-    escRows[existingIdx] = tx;
-  } else {
-    escRows.push(tx);
-  }
-  localStorage.setItem("im_escrow", JSON.stringify(escRows));
-}
-
-export function getDbLogs(): SystemLog[] {
-  const logs = localStorage.getItem("im_logs");
-  if (!logs) {
-    localStorage.setItem("im_logs", JSON.stringify(DEFAULT_LOGS));
-    return DEFAULT_LOGS;
-  }
-  return JSON.parse(logs);
-}
-
-export function addDbLog(actor: string, action: string, details: string, type: 'umkm' | 'influencer' | 'admin') {
-  const logs = getDbLogs();
-  const newLog: SystemLog = {
-    id: "log-" + Date.now(),
-    date: new Date().toISOString(),
-    actor,
-    action,
-    details,
-    type
-  };
-  logs.unshift(newLog);
-  localStorage.setItem("im_logs", JSON.stringify(logs));
-}
-
-// Reset LocalStorage back to pristine seed (utility to let users test from scratch)
-export function resetDatabase() {
-  localStorage.removeItem("im_users");
-  localStorage.removeItem("im_campaigns");
-  localStorage.removeItem("im_escrow");
-  localStorage.removeItem("im_logs");
-  getDbUsers();
-  getDbCampaigns();
-  getDbEscrow();
-  getDbLogs();
-}
+export const DEFAULT_USERS: User[] = [];
+export const DEFAULT_CAMPAIGNS: Campaign[] = [];
+export const DEFAULT_ESCROW: EscrowTx[] = [];
+export const DEFAULT_LOGS: SystemLog[] = [];

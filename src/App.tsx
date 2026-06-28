@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { User } from "./types";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
@@ -12,30 +12,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [screen, setScreen] = useState<"welcome" | "login" | "register" | "main">("welcome");
 
-  // Try to restore user from localStorage (if backend sets it)
-  useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser) as User;
-        setCurrentUser(parsed);
-        setScreen("main");
-      } catch (e) {
-        console.error("Session restore error:", e);
-        localStorage.removeItem("currentUser");
-      }
-    }
-  }, []);
-
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
-    localStorage.setItem("currentUser", JSON.stringify(user));
     setScreen("main");
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem("currentUser");
     setScreen("welcome");
   };
 

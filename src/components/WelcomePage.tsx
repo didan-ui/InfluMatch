@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { User, Campaign } from "../types";
 import { getDbUsers, getDbCampaigns } from "../utils";
 import { motion } from "motion/react";
@@ -25,20 +25,30 @@ interface WelcomePageProps {
 }
 
 export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }: WelcomePageProps) {
-  // Load data
-  const users = getDbUsers();
-  const campaigns = getDbCampaigns().filter(c => c.status !== "cancelled");
-  const influencers = users.filter(u => u.role === "influencer");
-
-  // Filter state for creators preview
+  const [users, setUsers] = useState<User[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedNiche, setSelectedNiche] = useState<string>("Semua");
   const niches = ["Semua", "Kuliner", "Fashion", "Lifestyle", "Kecantikan"];
 
-  const filteredInfluencers = selectedNiche === "Semua" 
-    ? influencers 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [userData, campaignData] = await Promise.all([getDbUsers(), getDbCampaigns()]);
+        setUsers(userData);
+        setCampaigns(campaignData.filter(c => c.status !== "cancelled"));
+      } catch (error) {
+        console.error("Failed to load welcome data", error);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const influencers = users.filter(u => u.role === "influencer");
+  const filteredInfluencers = selectedNiche === "Semua"
+    ? influencers
     : influencers.filter(i => i.niche?.includes(selectedNiche));
 
-  // Count active campaigns budget volume
   const totalBudgetCirculated = campaigns.reduce((sum, c) => sum + c.budget, 0);
 
   return (

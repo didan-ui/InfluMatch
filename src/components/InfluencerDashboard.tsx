@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { User, Campaign, EscrowTx, SystemLog } from "../types";
-import { 
-  getDbCampaigns, 
-  saveDbCampaign, 
-  getDbEscrow, 
-  saveDbEscrow, 
-  getDbUsers, 
-  addDbLog 
+import { User, Campaign, EscrowTx } from "../types";
+import {
+  getDbCampaigns,
+  saveDbCampaign,
+  getDbEscrow,
+  saveDbEscrow,
+  getDbUsers,
+  saveDbUser,
+  addDbLog,
 } from "../utils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -37,108 +38,125 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
   const [niche, setNiche] = useState<string[]>(currentUser.niche || []);
   const [showSettingsSuccess, setShowSettingsSuccess] = useState(false);
 
-  const forceRefresh = () => {
-    const allCampaigns = getDbCampaigns();
-    // Filter campaigns where this influencer is listed
-    const myCamps = allCampaigns.filter(c => c.influencers.some(i => i.influencerId === currentUser.id));
-    const allEscrows = getDbEscrow().filter(e => e.influencerId === currentUser.id);
-
-    setCampaigns(myCamps);
-    setEscrows(allEscrows);
+  const forceRefresh = async () => {
+    try {
+      const [allCampaigns, allEscrows] = await Promise.all([getDbCampaigns(), getDbEscrow()]);
+      const myCamps = allCampaigns.filter(c => (c.influencers || []).some(i => (i.influencer_id ?? i.influencerId) === currentUser.id));
+      const myEscrows = allEscrows.filter(e => (e.influencer_id ?? e.influencerId) === currentUser.id);
+      setCampaigns(myCamps);
+      setEscrows(myEscrows);
+    } catch (error) {
+      console.error("Failed to refresh influencer dashboard", error);
+    }
   };
 
   useEffect(() => {
-    forceRefresh();
+    void forceRefresh();
   }, [currentUser]);
 
   // Handle accepting brand invitations
-  const acceptInvitation = (campaignId: string) => {
-    const allCampaigns = getDbCampaigns();
-    const camp = allCampaigns.find(c => c.id === campaignId);
-    if (camp) {
-      const index = camp.influencers.findIndex(i => i.influencerId === currentUser.id);
-      if (index > -1) {
-        // Change status from 'invited' to 'brief_ready'
-        camp.influencers[index].status = "brief_ready";
-        saveDbCampaign(camp);
-
-        addDbLog(currentUser.name, "Menerima Kampanye", `${currentUser.name} menyetujui undangan brand dari kampanye "${camp.name}"`, "influencer");
-        forceRefresh();
-        alert("Undangan diterima! Silakan baca Brief Kampanye untuk memulai pengerjaan konten.");
+  const acceptInvitation = async (campaignId: string) => {
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (camp) {
+        const influencers = camp.influencers || [];
+        const index = influencers.findIndex(i => (i.influencer_id ?? i.influencerId) === currentUser.id);
+        if (index > -1) {
+          influencers[index].status = "brief_ready";
+          await saveDbCampaign(camp);
+          await addDbLog(currentUser.name, "Menerima Kampanye", `${currentUser.name} menyetujui undangan brand dari kampanye "${camp.name}"`, "influencer");
+          await forceRefresh();
+          alert("Undangan diterima! Silakan baca Brief Kampanye untuk memulai pengerjaan konten.");
+        }
       }
+    } catch (error) {
+      console.error("Failed to accept invitation", error);
     }
   };
 
   // Handle declining brand invitations
-  const declineInvitation = (campaignId: string) => {
-    const allCampaigns = getDbCampaigns();
-    const camp = allCampaigns.find(c => c.id === campaignId);
-    if (camp) {
-      // Remove influencer from list
-      camp.influencers = camp.influencers.filter(i => i.influencerId !== currentUser.id);
-      if (camp.influencers.length === 0) {
-        camp.status = "waiting";
+  const declineInvitation = async (campaignId: string) => {
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (camp) {
+        const nextInfluencers = (camp.influencers || []).filter(i => (i.influencer_id ?? i.influencerId) !== currentUser.id);
+        camp.influencers = nextInfluencers;
+        if (nextInfluencers.length === 0) {
+          camp.status = "waiting";
+        }
+        await saveDbCampaign(camp);
+        await addDbLog(currentUser.name, "Menolak Kampanye", `${currentUser.name} menolak undangan kampanye "${camp.name}"`, "influencer");
+        await forceRefresh();
+        alert("Undangan ditolak.");
       }
-      saveDbCampaign(camp);
-
-      addDbLog(currentUser.name, "Menolak Kampanye", `${currentUser.name} menolak undangan kampanye "${camp.name}"`, "influencer");
-      forceRefresh();
-      alert("Undangan ditolak.");
+    } catch (error) {
+      console.error("Failed to decline invitation", error);
     }
   };
 
   // Handle uploading completed content URL
-  const submitContent = (campaignId: string) => {
+  const submitContent = async (campaignId: string) => {
     const url = submissionUrls[campaignId];
     if (!url) {
       alert("Mohon masukkan tautan video/postingan sosial Anda terlebih dahulu.");
       return;
     }
 
-    const allCampaigns = getDbCampaigns();
-    const camp = allCampaigns.find(c => c.id === campaignId);
-    if (camp) {
-      const index = camp.influencers.findIndex(i => i.influencerId === currentUser.id);
-      if (index > -1) {
-        // Update milestone status to 'content_uploaded'
-        camp.influencers[index].status = "content_uploaded";
-        camp.influencers[index].submissionUrl = url;
-        saveDbCampaign(camp);
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (camp) {
+        const influencers = camp.influencers || [];
+        const index = influencers.findIndex(i => (i.influencer_id ?? i.influencerId) === currentUser.id);
+        if (index > -1) {
+          influencers[index].status = "content_uploaded";
+          influencers[index].submissionUrl = url;
+          influencers[index].submission_url = url;
+          await saveDbCampaign(camp);
 
-        // Update corresponding escrow status to 'pending' (ready for release)
-        const allEscrows = getDbEscrow();
-        const tx = allEscrows.find(e => e.campaignId === campaignId && e.influencerId === currentUser.id);
-        if (tx) {
-          tx.status = "pending";
-          saveDbEscrow(tx);
+          const allEscrows = await getDbEscrow();
+          const tx = allEscrows.find(e => (e.campaign_id ?? e.campaignId) === campaignId && (e.influencer_id ?? e.influencerId) === currentUser.id);
+          if (tx) {
+            await saveDbEscrow({ ...tx, status: "pending" });
+          }
+
+          await addDbLog(currentUser.name, "Menyerahkan Konten", `${currentUser.name} mengunggah posting video konten untuk "${camp.name}"`, "influencer");
+          setSubmissionUrls(prev => ({ ...prev, [campaignId]: "" }));
+          await forceRefresh();
+          alert("Konten Anda berhasil dikirim ke partner UMKM! Dana Escrow Anda kini berstatus 'Pending Approval' menunggu pelepasan dana dari pemilik UMKM.");
         }
-
-        addDbLog(currentUser.name, "Menyerahkan Konten", `${currentUser.name} mengunggah posting video konten untuk "${camp.name}"`, "influencer");
-        
-        // clear local input
-        setSubmissionUrls(prev => ({ ...prev, [campaignId]: "" }));
-        forceRefresh();
-        alert("Konten Anda berhasil dikirim ke partner UMKM! Dana Escrow Anda kini berstatus 'Pending Approval' menunggu pelepasan dana dari pemilik UMKM.");
       }
+    } catch (error) {
+      console.error("Failed to submit content", error);
     }
   };
 
   // Update settings info
-  const handleUpdateSettings = (e: React.FormEvent) => {
+  const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    const allUsers = getDbUsers();
-    const idx = allUsers.findIndex(u => u.id === currentUser.id);
-    if (idx > -1) {
-      allUsers[idx].pricePerPost = price;
-      allUsers[idx].followers = followers;
-      allUsers[idx].handle = handle;
-      allUsers[idx].city = city;
-      allUsers[idx].niche = niche;
-      localStorage.setItem("im_users", JSON.stringify(allUsers));
-
-      addDbLog(currentUser.name, "Update Setelan", "Memperbarui metrik penawaran creator", "influencer");
-      setShowSettingsSuccess(true);
-      setTimeout(() => setShowSettingsSuccess(false), 2000);
+    try {
+      const allUsers = await getDbUsers();
+      const idx = allUsers.findIndex(u => u.id === currentUser.id);
+      if (idx > -1) {
+        const updatedUser = {
+          ...allUsers[idx],
+          pricePerPost: price,
+          price_per_post: Number(String(price).replace(/[^0-9]/g, "")),
+          followers,
+          followersNum: Number(String(followers).replace(/[^0-9]/g, "")) || 0,
+          handle,
+          city,
+          niche,
+        };
+        await saveDbUser(updatedUser);
+        await addDbLog(currentUser.name, "Update Setelan", "Memperbarui metrik penawaran creator", "influencer");
+        setShowSettingsSuccess(true);
+        setTimeout(() => setShowSettingsSuccess(false), 2000);
+      }
+    } catch (error) {
+      console.error("Failed to update influencer settings", error);
     }
   };
 

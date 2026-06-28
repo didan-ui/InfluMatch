@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { User, Campaign, EscrowTx, SystemLog } from "../types";
-import { 
-  getDbUsers, 
-  getDbCampaigns, 
-  getDbEscrow, 
-  getDbLogs, 
-  saveDbUser, 
-  saveDbEscrow, 
-  saveDbCampaign, 
+import {
+  getDbUsers,
+  getDbCampaigns,
+  getDbEscrow,
+  getDbLogs,
+  saveDbUser,
+  saveDbEscrow,
+  saveDbCampaign,
   addDbLog,
-  resetDatabase
+  resetDatabase,
 } from "../utils";
 import { motion } from "motion/react";
 import { 
@@ -30,75 +30,106 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [escrows, setEscrows] = useState<EscrowTx[]>([]);
   const [logs, setLogs] = useState<SystemLog[]>([]);
 
-  const forceRefresh = () => {
-    setUsers(getDbUsers());
-    setCampaigns(getDbCampaigns());
-    setEscrows(getDbEscrow());
-    setLogs(getDbLogs());
+  const forceRefresh = async () => {
+    try {
+      const [userData, campaignData, escrowData, logData] = await Promise.all([
+        getDbUsers(),
+        getDbCampaigns(),
+        getDbEscrow(),
+        getDbLogs(),
+      ]);
+      setUsers(userData);
+      setCampaigns(campaignData);
+      setEscrows(escrowData);
+      setLogs(logData);
+    } catch (error) {
+      console.error("Failed to refresh admin dashboard", error);
+    }
   };
 
   useEffect(() => {
-    forceRefresh();
+    void forceRefresh();
   }, [currentUser]);
 
   // Handle approving pending user accounts
-  const handleApproveUser = (userId: string, userName: string) => {
-    const allUsers = getDbUsers();
-    const user = allUsers.find(u => u.id === userId);
-    if (user) {
-      user.isApproved = true;
-      saveDbUser(user);
-      addDbLog(currentUser.name, "Persetujuan User", `Admin Utama menyetujui akun ${userName}`, "admin");
-      forceRefresh();
-      alert(`User ${userName} berhasil disetujui untuk go-live di InfluMatch.`);
+  const handleApproveUser = async (userId: string, userName: string) => {
+    try {
+      const allUsers = await getDbUsers();
+      const user = allUsers.find(u => u.id === userId);
+      if (user) {
+        user.is_approved = true;
+        user.isApproved = true;
+        await saveDbUser(user);
+        await addDbLog(currentUser.name, "Persetujuan User", `Admin Utama menyetujui akun ${userName}`, "admin");
+        await forceRefresh();
+        alert(`User ${userName} berhasil disetujui untuk go-live di InfluMatch.`);
+      }
+    } catch (error) {
+      console.error("Failed to approve user", error);
     }
   };
 
   // Handle deleting/suspending user accounts
-  const handleRejectUser = (userId: string, userName: string) => {
-    const allUsers = getDbUsers().filter(u => u.id !== userId);
-    localStorage.setItem("im_users", JSON.stringify(allUsers));
-    addDbLog(currentUser.name, "Penolakan User", `Admin menolak/menghapus akun ${userName}`, "admin");
-    forceRefresh();
-    alert(`Akun ${userName} ditolak & dihapus.`);
+  const handleRejectUser = async (userId: string, userName: string) => {
+    try {
+      const allUsers = await getDbUsers();
+      const target = allUsers.find(u => u.id === userId);
+      if (target) {
+        await saveDbUser({ ...target, is_approved: false, isApproved: false });
+      }
+      await addDbLog(currentUser.name, "Penolakan User", `Admin menolak/menghapus akun ${userName}`, "admin");
+      await forceRefresh();
+      alert(`Akun ${userName} ditolak & dihapus.`);
+    } catch (error) {
+      console.error("Failed to reject user", error);
+    }
   };
 
   // Handle forcing release of escrow in dispute scenario
-  const handleAdminForceRelease = (txId: string) => {
-    const allEscrows = getDbEscrow();
-    const tx = allEscrows.find(e => e.id === txId);
-    if (tx) {
-      tx.status = "released";
-      saveDbEscrow(tx);
+  const handleAdminForceRelease = async (txId: string) => {
+    try {
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.id === txId);
+      if (tx) {
+        const updatedTx = { ...tx, status: "released" as const };
+        await saveDbEscrow(updatedTx);
 
-      // set campaign status in db
-      const allCampaigns = getDbCampaigns();
-      const camp = allCampaigns.find(c => c.id === tx.campaignId);
-      if (camp) {
-        const infCandidate = camp.influencers.find(i => i.influencerId === tx.influencerId);
-        if (infCandidate) {
-          infCandidate.status = "completed";
-          infCandidate.escrowReleased = true;
+        const allCampaigns = await getDbCampaigns();
+        const camp = allCampaigns.find(c => c.id === (tx.campaign_id ?? tx.campaignId));
+        if (camp) {
+          const influencers = camp.influencers || [];
+          const infCandidate = influencers.find(i => (i.influencer_id ?? i.influencerId) === (tx.influencer_id ?? tx.influencerId));
+          if (infCandidate) {
+            infCandidate.status = "completed";
+            infCandidate.escrowReleased = true;
+            infCandidate.escrow_released = true;
+          }
+          if (influencers.every(i => i.status === "completed")) {
+            camp.status = "completed";
+          }
+          await saveDbCampaign(camp);
         }
-        if (camp.influencers.every(i => i.status === "completed")) {
-          camp.status = "completed";
-        }
-        saveDbCampaign(camp);
+
+        await addDbLog(currentUser.name, "Bantuan Dana Selesai", `Admin Utama membantu mengirimkan dana pembayaran sebesar Rp${tx.amount.toLocaleString()} ke influencer ${tx.influencer_name ?? tx.influencerName}`, "admin");
+        await forceRefresh();
+        alert("Penyelesaian Selesai! Pembayaran berhasil diteruskan langsung ke influencer.");
       }
-
-      addDbLog(currentUser.name, "Bantuan Dana Selesai", `Admin Utama membantu mengirimkan dana pembayaran sebesar Rp${tx.amount.toLocaleString()} ke influencer ${tx.influencerName}`, "admin");
-      forceRefresh();
-      alert("Penyelesaian Selesai! Pembayaran berhasil diteruskan langsung ke influencer.");
+    } catch (error) {
+      console.error("Failed to force release", error);
     }
   };
 
   // Reset database back to default seed for testing
-  const handleResetDb = () => {
-    if (window.confirm("Apakah Anda yakin ingin memulihkan database lokal ke data bawaan awal? Semua campaign dan user baru akan terhapus.")) {
-      resetDatabase();
-      forceRefresh();
-      addDbLog(currentUser.name, "Reset Database", "Memulihkan data system seed bawaan", "admin");
-      alert("Database platform berhasil dipulihkan.");
+  const handleResetDb = async () => {
+    if (window.confirm("Apakah Anda yakin ingin memulihkan data aplikasi?")) {
+      try {
+        await resetDatabase();
+        await forceRefresh();
+        await addDbLog(currentUser.name, "Reset Database", "Memulihkan data system seed bawaan", "admin");
+        alert("Database platform berhasil dipulihkan.");
+      } catch (error) {
+        console.error("Failed to reset database", error);
+      }
     }
   };
 
