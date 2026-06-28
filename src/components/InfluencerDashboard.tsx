@@ -170,15 +170,15 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
   };
 
   const incomingInvites = campaigns.filter(c => 
-    c.influencers.some(i => i.influencerId === currentUser.id && i.status === "invited")
+    (c.influencers || []).some(i => i.influencerId === currentUser.id && i.status === "invited")
   );
 
   const activeCamps = campaigns.filter(c => 
-    c.influencers.some(i => i.influencerId === currentUser.id && i.status !== "invited" && i.status !== "completed")
+    (c.influencers || []).some(i => i.influencerId === currentUser.id && i.status !== "invited" && i.status !== "completed")
   );
 
   const completedCamps = campaigns.filter(c => 
-    c.influencers.some(i => i.influencerId === currentUser.id && i.status === "completed")
+    (c.influencers || []).some(i => i.influencerId === currentUser.id && i.status === "completed")
   );
 
   // Calculate earnings
@@ -336,7 +336,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
 
             <div className="space-y-6">
               {activeCamps.map((camp) => {
-                const myMilestone = camp.influencers.find(i => i.influencerId === currentUser.id);
+                const myMilestone = (camp.influencers || []).find(i => i.influencerId === currentUser.id);
                 return (
                   <div key={camp.id} className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-brand-sand/50">
@@ -504,7 +504,7 @@ export default function InfluencerDashboard({ currentUser, onLogout }: Influence
                   </thead>
                   <tbody className="divide-y divide-brand-sand/50">
                     {completedCamps.map(camp => {
-                      const me = camp.influencers.find(i => i.influencerId === currentUser.id);
+                      const me = (camp.influencers || []).find(i => i.influencerId === currentUser.id);
                       return (
                         <tr key={camp.id} className="hover:bg-brand-bg/10">
                           <td className="py-3.5 px-4 font-bold">{camp.name}</td>

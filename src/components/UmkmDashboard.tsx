@@ -259,8 +259,10 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   };
 
   // Release Escrow payment
-  const handleReleaseEscrow = async (txId: string, campaignId: string, influencerId: string) => {
+  const handleReleaseEscrow = async (txId: string, campaignId?: string, influencerId?: string) => {
     try {
+      if (!campaignId || !influencerId) return;
+
       const allEscrows = await getDbEscrow();
       const tx = allEscrows.find(e => e.id === txId);
       if (tx) {
@@ -292,8 +294,10 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
   };
 
   // Lock Escrow / Bayar Ke Rekening Escrow Pertama
-  const handleLockEscrow = async (txId: string, campaignId: string, influencerId: string) => {
+  const handleLockEscrow = async (txId: string, campaignId?: string, influencerId?: string) => {
     try {
+      if (!campaignId || !influencerId) return;
+
       const allEscrows = await getDbEscrow();
       const tx = allEscrows.find(e => e.id === txId);
       if (tx) {
@@ -942,7 +946,7 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                       <div className="flex gap-2 self-end sm:self-center">
                         {tx.status === "pending" && (
                           <button
-                            onClick={() => handleLockEscrow(tx.id, tx.campaignId, tx.influencerId)}
+                            onClick={() => handleLockEscrow(tx.id, tx.campaign_id, tx.influencer_id)}
                             className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-xl hover:opacity-90 transition-all text-[11px] cursor-pointer cursor-pointer whitespace-nowrap"
                           >
                             Kunci Dana Kemitraan (Bayar)
@@ -963,12 +967,13 @@ export default function UmkmDashboard({ currentUser, onLogout }: UmkmDashboardPr
                         
                         {/* If influencer has uploaded content and the user has locked funds, show Release button! */}
                         {tx.status === "locked" && (() => {
-                          const associatedCamp = campaigns.find(c => c.id === tx.campaignId);
-                          const member = associatedCamp?.influencers.find(i => i.influencerId === tx.influencerId);
+                          const associatedCamp = campaigns.find(c => c.id === tx.campaign_id);
+                          const campaignInfluencers = associatedCamp?.influencers || [];
+                          const member = campaignInfluencers.find(i => i.influencerId === tx.influencer_id);
                           if (member?.status === "content_uploaded") {
                             return (
                               <button
-                                onClick={() => handleReleaseEscrow(tx.id, tx.campaignId, tx.influencerId)}
+                                onClick={() => handleReleaseEscrow(tx.id, tx.campaign_id, tx.influencer_id)}
                                 className="px-3 py-1.5 bg-brand-sage-dark text-brand-white font-bold rounded-xl hover:opacity-95 transition-all text-[11px] cursor-pointer"
                               >
                                 Selesai & Cairkan Dana

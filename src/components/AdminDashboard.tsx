@@ -377,7 +377,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] tracking-wide ${
                             ex.status === "released" ? "bg-brand-sage text-brand-sage-dark font-sans font-bold" :
-                            ex.status === "locked" ? "bg-red-50 text-red-700 bg-[#FFF0F0] border border-red-250/20" : "bg-brand-sky text-brand-sky-dark font-sans"
+                            ex.status === "locked" ? "bg-[#FFF0F0] text-red-700 border border-red-250/20" : "bg-brand-sky text-brand-sky-dark font-sans"
                           }`}>
                             {ex.status.toUpperCase()}
                           </span>
@@ -419,17 +419,17 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                 {logs.map((log) => (
                   <div key={log.id} className="p-3.5 border border-brand-sand/65 rounded-2xl flex items-start gap-3.5 bg-brand-bg/30 text-xs">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold select-none text-[11px] ${
-                      log.type === "admin" ? "bg-red-50 text-red-700" :
-                      log.type === "umkm" ? "bg-brand-blush text-brand-blush-dark" : "bg-brand-sage text-brand-sage-dark"
+                      (log.type ?? "admin") === "admin" ? "bg-red-50 text-red-700" :
+                      (log.type ?? "admin") === "umkm" ? "bg-brand-blush text-brand-blush-dark" : "bg-brand-sage text-brand-sage-dark"
                     }`}>
-                      {log.type.toUpperCase().slice(0, 2)}
+                      {(log.type ?? "admin").toUpperCase().slice(0, 2)}
                     </div>
 
                     <div className="space-y-1 select-text">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-brand-text font-serif">{log.actor}</span>
                         <span className="bg-brand-sand/50 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono uppercase text-brand-text-soft">{log.action}</span>
-                        <span className="text-[10px] text-brand-text-light font-mono ml-auto">{new Date(log.date).toLocaleString()}</span>
+                        <span className="text-[10px] text-brand-text-light font-mono ml-auto">{new Date(log.date ?? log.created_at).toLocaleString()}</span>
                       </div>
                       <p className="text-brand-text-soft leading-relaxed font-mono text-[10.5px] bg-brand-white border border-brand-sand/40 p-2 rounded-xl mt-1.5 shadow-inner">
                         {log.details}
