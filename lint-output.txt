@@ -1,0 +1,153 @@
+
+> react-example@0.0.0 lint
+> tsc --noEmit
+
+src/components/AdminDashboard.tsx(49,12): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/AdminDashboard.tsx(76,55): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/AdminDashboard.tsx(78,35): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/AdminDashboard.tsx(78,79): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/AdminDashboard.tsx(83,18): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/AdminDashboard.tsx(89,167): error TS2551: Property 'influencerName' does not exist on type 'EscrowTx'. Did you mean 'influencer_name'?
+src/components/AdminDashboard.tsx(109,49): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/AdminDashboard.tsx(282,51): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/AdminDashboard.tsx(282,74): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/AdminDashboard.tsx(287,31): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/AdminDashboard.tsx(289,32): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/AdminDashboard.tsx(293,31): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/AdminDashboard.tsx(342,67): error TS2551: Property 'campaignName' does not exist on type 'EscrowTx'. Did you mean 'campaign_name'?
+src/components/AdminDashboard.tsx(343,78): error TS2551: Property 'influencerName' does not exist on type 'EscrowTx'. Did you mean 'influencer_name'?
+src/components/AdminDashboard.tsx(345,90): error TS2339: Property 'date' does not exist on type 'EscrowTx'.
+src/components/AdminDashboard.tsx(391,27): error TS2339: Property 'type' does not exist on type 'SystemLog'.
+src/components/AdminDashboard.tsx(392,27): error TS2339: Property 'type' does not exist on type 'SystemLog'.
+src/components/AdminDashboard.tsx(394,28): error TS2339: Property 'type' does not exist on type 'SystemLog'.
+src/components/AdminDashboard.tsx(399,85): error TS2339: Property 'actor' does not exist on type 'SystemLog'.
+src/components/AdminDashboard.tsx(401,109): error TS2339: Property 'date' does not exist on type 'SystemLog'.
+src/components/InfluencerDashboard.tsx(33,50): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(34,58): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(35,52): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(37,60): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(43,48): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(44,52): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/InfluencerDashboard.tsx(59,26): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(62,14): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(78,12): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(78,31): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(79,16): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(101,26): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(104,14): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(105,14): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(110,43): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/InfluencerDashboard.tsx(110,74): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/InfluencerDashboard.tsx(132,21): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(133,21): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(134,21): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(136,21): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(155,7): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(159,7): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(163,7): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(178,28): error TS2551: Property 'avatarUrl' does not exist on type 'User'. Did you mean 'avatar_url'?
+src/components/InfluencerDashboard.tsx(182,118): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/InfluencerDashboard.tsx(265,42): error TS2551: Property 'umkmName' does not exist on type 'Campaign'. Did you mean 'umkm_name'?
+src/components/InfluencerDashboard.tsx(321,42): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(327,139): error TS2551: Property 'umkmName' does not exist on type 'Campaign'. Did you mean 'umkm_name'?
+src/components/InfluencerDashboard.tsx(349,136): error TS2551: Property 'umkmName' does not exist on type 'Campaign'. Did you mean 'umkm_name'?
+src/components/InfluencerDashboard.tsx(362,31): error TS2551: Property 'briefText' does not exist on type 'Campaign'. Did you mean 'brief_text'?
+src/components/InfluencerDashboard.tsx(489,39): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/InfluencerDashboard.tsx(493,82): error TS2551: Property 'umkmName' does not exist on type 'Campaign'. Did you mean 'umkm_name'?
+src/components/RegisterPage.tsx(74,7): error TS2561: Object literal may only specify known properties, but 'isApproved' does not exist in type 'User'. Did you mean to write 'is_approved'?
+src/components/RegisterPage.tsx(79,15): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/RegisterPage.tsx(80,15): error TS2339: Property 'brandCategory' does not exist on type 'User'.
+src/components/RegisterPage.tsx(82,15): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/RegisterPage.tsx(83,15): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/RegisterPage.tsx(89,15): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/RegisterPage.tsx(90,15): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/RegisterPage.tsx(91,15): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/RegisterPage.tsx(92,15): error TS2339: Property 'engagement' does not exist on type 'User'.
+src/components/Topbar.tsx(41,59): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/Topbar.tsx(46,26): error TS2551: Property 'avatarUrl' does not exist on type 'User'. Did you mean 'avatar_url'?
+src/components/UmkmDashboard.tsx(64,64): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(65,70): error TS2339: Property 'brandCategory' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(72,57): error TS2551: Property 'umkmId' does not exist on type 'Campaign'. Did you mean 'umkm_id'?
+src/components/UmkmDashboard.tsx(73,76): error TS2551: Property 'isApproved' does not exist on type 'User'. Did you mean 'is_approved'?
+src/components/UmkmDashboard.tsx(74,84): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/UmkmDashboard.tsx(75,47): error TS2339: Property 'type' does not exist on type 'SystemLog'.
+src/components/UmkmDashboard.tsx(75,68): error TS2339: Property 'type' does not exist on type 'SystemLog'.
+src/components/UmkmDashboard.tsx(106,34): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(107,38): error TS2339: Property 'brandCategory' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(123,20): error TS2551: Property 'briefText' does not exist on type 'Campaign'. Did you mean 'brief_text'?
+src/components/UmkmDashboard.tsx(148,7): error TS2561: Object literal may only specify known properties, but 'umkmId' does not exist in type 'Campaign'. Did you mean to write 'umkm_id'?
+src/components/UmkmDashboard.tsx(149,29): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(181,16): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(187,12): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(203,9): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'EscrowTx'.
+src/components/UmkmDashboard.tsx(235,26): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(241,18): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(247,120): error TS2551: Property 'influencerName' does not exist on type 'EscrowTx'. Did you mean 'influencer_name'?
+src/components/UmkmDashboard.tsx(265,26): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(285,23): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(286,23): error TS2339: Property 'brandCategory' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(299,32): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(299,46): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(300,32): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(300,45): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(302,47): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(302,60): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(306,31): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(306,66): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(308,31): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(308,65): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(310,31): error TS2339: Property 'followersNum' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(327,104): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(397,48): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(485,76): error TS2339: Property 'actor' does not exist on type 'SystemLog'.
+src/components/UmkmDashboard.tsx(488,41): error TS2339: Property 'date' does not exist on type 'SystemLog'.
+src/components/UmkmDashboard.tsx(535,85): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(619,28): error TS2551: Property 'avatarUrl' does not exist on type 'User'. Did you mean 'avatar_url'?
+src/components/UmkmDashboard.tsx(625,100): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(632,53): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(636,30): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(649,97): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(653,97): error TS2339: Property 'engagement' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(657,102): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(786,33): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(787,36): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(792,33): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(792,67): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(875,70): error TS2551: Property 'campaignName' does not exist on type 'EscrowTx'. Did you mean 'campaign_name'?
+src/components/UmkmDashboard.tsx(876,92): error TS2551: Property 'influencerName' does not exist on type 'EscrowTx'. Did you mean 'influencer_name'?
+src/components/UmkmDashboard.tsx(877,81): error TS2339: Property 'date' does not exist on type 'EscrowTx'.
+src/components/UmkmDashboard.tsx(883,71): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/UmkmDashboard.tsx(883,86): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/UmkmDashboard.tsx(904,82): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/UmkmDashboard.tsx(905,58): error TS2339: Property 'influencers' does not exist on type 'Campaign'.
+src/components/UmkmDashboard.tsx(905,102): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/UmkmDashboard.tsx(909,78): error TS2551: Property 'campaignId' does not exist on type 'EscrowTx'. Did you mean 'campaign_id'?
+src/components/UmkmDashboard.tsx(909,93): error TS2551: Property 'influencerId' does not exist on type 'EscrowTx'. Did you mean 'influencer_id'?
+src/components/UmkmDashboard.tsx(1079,87): error TS2339: Property 'brandName' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(1340,47): error TS2551: Property 'avatarUrl' does not exist on type 'User'. Did you mean 'avatar_url'?
+src/components/UmkmDashboard.tsx(1344,131): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(1344,167): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/UmkmDashboard.tsx(1365,134): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/WelcomePage.tsx(39,33): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/WelcomePage.tsx(188,30): error TS2551: Property 'avatarUrl' does not exist on type 'User'. Did you mean 'avatar_url'?
+src/components/WelcomePage.tsx(192,107): error TS2339: Property 'handle' does not exist on type 'User'.
+src/components/WelcomePage.tsx(204,86): error TS2339: Property 'followers' does not exist on type 'User'.
+src/components/WelcomePage.tsx(208,80): error TS2339: Property 'pricePerPost' does not exist on type 'User'.
+src/components/WelcomePage.tsx(213,26): error TS2339: Property 'niche' does not exist on type 'User'.
+src/components/WelcomePage.tsx(267,95): error TS2551: Property 'umkmName' does not exist on type 'Campaign'. Did you mean 'umkm_name'?
+src/utils.ts(10,5): error TS2353: Object literal may only specify known properties, and 'brandName' does not exist in type 'User'.
+src/utils.ts(21,5): error TS2353: Object literal may only specify known properties, and 'handle' does not exist in type 'User'.
+src/utils.ts(37,5): error TS2353: Object literal may only specify known properties, and 'handle' does not exist in type 'User'.
+src/utils.ts(53,5): error TS2353: Object literal may only specify known properties, and 'handle' does not exist in type 'User'.
+src/utils.ts(69,5): error TS2353: Object literal may only specify known properties, and 'handle' does not exist in type 'User'.
+src/utils.ts(85,5): error TS2561: Object literal may only specify known properties, but 'isApproved' does not exist in type 'User'. Did you mean to write 'is_approved'?
+src/utils.ts(94,5): error TS2561: Object literal may only specify known properties, but 'umkmId' does not exist in type 'Campaign'. Did you mean to write 'umkm_id'?
+src/utils.ts(123,5): error TS2561: Object literal may only specify known properties, but 'umkmId' does not exist in type 'Campaign'. Did you mean to write 'umkm_id'?
+src/utils.ts(145,5): error TS2561: Object literal may only specify known properties, but 'umkmId' does not exist in type 'Campaign'. Did you mean to write 'umkm_id'?
+src/utils.ts(172,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'EscrowTx'.
+src/utils.ts(182,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'EscrowTx'.
+src/utils.ts(192,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'EscrowTx'.
+src/utils.ts(205,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'SystemLog'.
+src/utils.ts(213,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'SystemLog'.
+src/utils.ts(221,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'SystemLog'.
+src/utils.ts(302,5): error TS2353: Object literal may only specify known properties, and 'date' does not exist in type 'SystemLog'.
