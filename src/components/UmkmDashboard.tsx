@@ -1199,8 +1199,17 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                   className="bg-brand-white border border-brand-sand rounded-3xl p-5 shadow-sm hover:border-brand-blush-dark/30 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-5"
                 >
                   <div className="flex gap-4 items-center flex-1">
-                    <div className="w-14 h-14 bg-brand-blush rounded-full flex items-center justify-center font-bold text-brand-blush-dark text-base border border-brand-sand shadow-inner shrink-0">
-                      {inf.avatarUrl}
+                    <div className="w-14 h-14 bg-brand-blush rounded-full flex items-center justify-center font-bold text-brand-blush-dark text-base border border-brand-sand shadow-inner shrink-0 overflow-hidden">
+                      {inf.avatarUrl && inf.avatarUrl.startsWith("http") ? (
+                        <img 
+                          src={inf.avatarUrl} 
+                          alt={inf.name} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        inf.avatarUrl || inf.name.slice(0, 2).toUpperCase()
+                      )}
                     </div>
 
                     <div className="space-y-1.5 flex-1 min-w-0">
@@ -2268,8 +2277,17 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                 className="bg-brand-white rounded-3xl overflow-hidden shadow-xl max-w-md w-full p-6 z-10 border border-brand-sand relative font-sans"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-brand-blush text-brand-blush-dark font-bold font-sans flex items-center justify-center shrink-0">
-                    {targetInfluencerToInvite.avatarUrl}
+                  <div className="w-10 h-10 rounded-full bg-brand-blush text-brand-blush-dark font-bold font-sans flex items-center justify-center shrink-0 overflow-hidden">
+                    {targetInfluencerToInvite.avatarUrl && targetInfluencerToInvite.avatarUrl.startsWith("http") ? (
+                      <img 
+                        src={targetInfluencerToInvite.avatarUrl} 
+                        alt={targetInfluencerToInvite.name} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      targetInfluencerToInvite.avatarUrl || targetInfluencerToInvite.name.slice(0, 2).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <h3 className="font-serif text-lg font-bold text-brand-text">Undang {targetInfluencerToInvite.name}</h3>

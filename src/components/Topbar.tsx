@@ -42,8 +42,17 @@ export default function Topbar({ currentUser, onLogout }: TopbarProps) {
             </div>
           </div>
 
-          <div className="w-10 h-10 rounded-full bg-brand-blush text-brand-blush-dark flex items-center justify-center font-bold text-sm border border-brand-sand select-none shadow-inner">
-            {currentUser.avatarUrl || currentUser.name.slice(0, 2).toUpperCase()}
+          <div className="w-10 h-10 rounded-full bg-brand-blush text-brand-blush-dark flex items-center justify-center font-bold text-sm border border-brand-sand select-none shadow-inner overflow-hidden">
+            {currentUser.avatarUrl && currentUser.avatarUrl.startsWith("http") ? (
+              <img 
+                src={currentUser.avatarUrl} 
+                alt={currentUser.name} 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              currentUser.avatarUrl || currentUser.name.slice(0, 2).toUpperCase()
+            )}
           </div>
 
         </div>

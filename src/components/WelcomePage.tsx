@@ -744,8 +744,17 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-brand-sky rounded-full flex items-center justify-center font-bold text-brand-sky-dark text-xs select-none">
-                        {inf.avatarUrl}
+                      <div className="w-10 h-10 bg-brand-sky rounded-full flex items-center justify-center font-bold text-brand-sky-dark text-xs select-none overflow-hidden">
+                        {inf.avatarUrl && inf.avatarUrl.startsWith("http") ? (
+                          <img 
+                            src={inf.avatarUrl} 
+                            alt={inf.name} 
+                            className="w-full h-full object-cover" 
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          inf.avatarUrl || inf.name.slice(0, 2).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <h4 className="font-serif text-sm font-bold text-brand-text leading-tight">{inf.name}</h4>

@@ -458,8 +458,17 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       <aside className="w-full md:w-64 bg-brand-white border-r border-brand-sand shrink-0 py-6">
         <div className="px-6 pb-6 border-b border-brand-sand">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-brand-sage rounded-full flex items-center justify-center font-bold text-brand-sage-dark shadow-inner text-base">
-              {currentUser.avatarUrl}
+            <div className="w-12 h-12 bg-brand-sage rounded-full flex items-center justify-center font-bold text-brand-sage-dark shadow-inner text-base overflow-hidden">
+              {currentUser.avatarUrl && currentUser.avatarUrl.startsWith("http") ? (
+                <img 
+                  src={currentUser.avatarUrl} 
+                  alt={currentUser.name} 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                currentUser.avatarUrl || currentUser.name.slice(0, 2).toUpperCase()
+              )}
             </div>
             <div>
               <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{currentUser.name}</h3>

@@ -59,10 +59,12 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
       getDbLogs(),
       db.withdrawals.list()
     ]);
+    // Sort logs newest first
+    const sortedLogs = l.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setUsers(u);
     setCampaigns(c);
     setEscrows(e);
-    setLogs(l);
+    setLogs(sortedLogs);
     setWithdrawals(w);
   };
 
@@ -183,16 +185,6 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     }
   };
 
-  // Reset database — not available when using Supabase
-  const handleResetDb = () => {
-    setAlertInfo({
-      isOpen: true,
-      title: "Tindakan Tidak Diizinkan",
-      message: "Reset database langsung tidak tersedia dalam integrasi Supabase. Hapus tabel/kolom secara aman melalui dasbor Supabase Anda.",
-      type: "error"
-    });
-  };
-
   // Stats calculation
   const totalUMKM = users.filter(u => u.role === "umkm").length;
   const totalInfluencers = users.filter(u => u.role === "influencer").length;
@@ -243,7 +235,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 shrink-0 ${isSubActive ? 'text-red-650' : 'text-brand-text-light'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isSubActive ? 'text-red-600' : 'text-brand-text-light'}`} />
                   <span>{subTab.label}</span>
                 </div>
                 {subTab.badge !== undefined && subTab.badge > 0 && (
@@ -255,18 +247,6 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
             );
           })}
         </div>
-
-        {/* Database diagnostic panel */}
-        <div className="mt-12 px-4 pt-6 border-t border-brand-sand/65 space-y-3">
-          <p className="px-3 text-[10px] font-bold text-brand-text-light uppercase select-none tracking-wider">DIAGNOSTIK TEKNIS</p>
-          
-          <button
-            onClick={handleResetDb}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-700 bg-red-50/40 hover:bg-red-50 text-[11px] font-bold transition-all cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" /> Reset DB Platform
-          </button>
-        </div>
       </aside>
 
       {/* ADMIN CONTENT BODY */}
@@ -277,7 +257,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
           
           {/* Bento Hero - Admin Lavender Pastel Insight Box */}
           <div className="col-span-12 lg:col-span-8 bg-brand-lav text-brand-text rounded-[2rem] p-8 relative overflow-hidden flex flex-col justify-between shadow-xs border border-brand-sand min-h-[250px]">
-            <div className="relative z-10-lav">
+            <div className="relative z-10">
               <span className="px-3 py-1 bg-brand-lav-dark/15 text-brand-lav-dark text-[10px] font-black rounded-full uppercase tracking-wider">
                 Platform Admin Console
               </span>
@@ -376,7 +356,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         <td className="py-3.5 px-4 text-brand-text-soft">{u.city || "Malang, Jatim"}</td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] ${
-                            u.isApproved ? "bg-brand-sage text-brand-sage-dark" : "bg-yellow-105 bg-[#FDF2CB] text-[#907010]"
+                            u.isApproved ? "bg-brand-sage text-brand-sage-dark" : "bg-[#FDF2CB] text-[#907010]"
                           }`}>
                             {u.isApproved ? "Aktif" : "Menunggu Approval"}
                           </span>
@@ -641,12 +621,12 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                       <tr key={ex.id} className="hover:bg-brand-bg/10">
                         <td className="py-3.5 px-4 font-bold">{ex.campaignName}</td>
                         <td className="py-3.5 px-4 text-brand-text-soft">{ex.influencerName}</td>
-                        <td className="py-3.5 px-4 font-mono font-bold text-brand-sage-dark border-b-grey">Rp{ex.amount.toLocaleString()}</td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-brand-sage-dark border-b border-brand-sand/50">Rp{ex.amount.toLocaleString()}</td>
                         <td className="py-3.5 px-4 font-mono text-brand-text mb-0.5">{ex.date}</td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] tracking-wide ${
                             ex.status === "released" ? "bg-brand-sage text-brand-sage-dark font-sans font-bold" :
-                            ex.status === "locked" ? "bg-red-50 text-red-700 bg-[#FFF0F0] border border-red-250/20" : "bg-brand-sky text-brand-sky-dark font-sans"
+                            ex.status === "locked" ? "bg-red-50 text-red-700 bg-[#FFF0F0] border border-red-200" : "bg-brand-sky text-brand-sky-dark font-sans"
                           }`}>
                             {ex.status.toUpperCase()}
                           </span>
@@ -694,7 +674,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-sand/50">
-                    {withdrawals.filter(w => w.status !== "pending").map(w => (
+                    {withdrawals.filter(w => w.status !== "pending" || !w.umkmId).map(w => (
                       <tr key={w.id} className="hover:bg-brand-bg/10">
                         <td className="py-3.5 px-4 font-bold">{w.influencerName}</td>
                         <td className="py-3.5 px-4 text-brand-text-soft font-bold">{w.bankName}</td>
@@ -706,15 +686,17 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                           <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] tracking-wide border ${
                             w.status === "completed" ? "bg-brand-sage text-brand-sage-dark border-brand-sage-dark/20" :
                             w.status === "rejected" ? "bg-red-100 text-red-700 border-red-200" : 
-                            "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                            w.status === "approved_by_umkm" ? "bg-indigo-100 text-indigo-800 border-indigo-200" :
+                            "bg-amber-100 text-amber-800 border-amber-200"
                           }`}>
                             {w.status === "completed" ? "Selesai" : 
                              w.status === "rejected" ? "Ditolak" : 
-                             "Butuh Transfer"}
+                             w.status === "approved_by_umkm" ? "Disetujui UMKM" :
+                             "Tertunda Admin"}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right space-x-2">
-                          {w.status === "approved_by_umkm" ? (
+                          {(w.status === "approved_by_umkm" || (w.status === "pending" && !w.umkmId)) ? (
                             <>
                               <button
                                 onClick={() => handleApproveWithdrawal(w.id)}
@@ -735,9 +717,9 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         </td>
                       </tr>
                     ))}
-                    {withdrawals.filter(w => w.status !== "pending").length === 0 && (
+                    {withdrawals.filter(w => w.status !== "pending" || !w.umkmId).length === 0 && (
                       <tr>
-                        <td colSpan={8} className="py-10 text-center text-brand-text-soft">Tidak ada pengajuan penarikan dana yang telah disetujui UMKM saat ini.</td>
+                        <td colSpan={8} className="py-10 text-center text-brand-text-soft">Tidak ada pengajuan penarikan dana aktif saat ini.</td>
                       </tr>
                     )}
                   </tbody>

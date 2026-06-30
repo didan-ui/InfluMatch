@@ -310,21 +310,36 @@ export const supabaseDb = {
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(item => ({
-        id: item.id,
-        influencerId: item.influencer_id,
-        influencerName: item.influencer_name,
-        amount: Number(item.amount),
-        bankName: item.bank_name,
-        accountNo: item.account_no,
-        accountHolder: item.account_holder,
-        status: item.status,
-        date: item.date
-      }));
+      return (data || []).map(item => {
+        const parts = (item.bank_name || "").split("||");
+        const bankName = parts[0] || item.bank_name || "";
+        const umkmId = parts[1] || undefined;
+        const campaignId = parts[2] || undefined;
+        const campaignName = parts[3] || undefined;
+        const status = (parts[4] || item.status) as any;
+
+        return {
+          id: item.id,
+          influencerId: item.influencer_id,
+          influencerName: item.influencer_name,
+          amount: Number(item.amount),
+          bankName,
+          accountNo: item.account_no,
+          accountHolder: item.account_holder,
+          status,
+          date: item.date,
+          umkmId,
+          campaignId,
+          campaignName
+        };
+      });
     },
 
     // Ajukan penarikan dana baru
     save: async (w: WithdrawalTx): Promise<WithdrawalTx> => {
+      const dbStatus = w.status === "approved_by_umkm" ? "pending" : w.status;
+      const dbBankName = `${w.bankName || ""}||${w.umkmId || ""}||${w.campaignId || ""}||${w.campaignName || ""}||${w.status}`;
+
       const { data, error } = await supabase
         .from("withdrawals")
         .insert([{
@@ -332,23 +347,48 @@ export const supabaseDb = {
           influencer_id: w.influencerId,
           influencer_name: w.influencerName,
           amount: w.amount,
-          bank_name: w.bankName,
+          bank_name: dbBankName,
           account_no: w.accountNo,
           account_holder: w.accountHolder,
-          status: w.status,
+          status: dbStatus,
           date: w.date
         }])
         .select()
         .single();
 
       if (error) throw error;
-      return data as unknown as WithdrawalTx;
+      return {
+        ...w,
+        id: data.id
+      };
     },
 
     // Update status penarikan dana
     update: async (id: string, updates: Partial<WithdrawalTx>): Promise<WithdrawalTx | null> => {
-      const dbUpdates: any = {};
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      // Dapatkan data penarikan sebelumnya terlebih dahulu untuk mempertahankan fields yang ada
+      const { data: existing, error: getError } = await supabase
+        .from("withdrawals")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (getError || !existing) return null;
+
+      const parts = (existing.bank_name || "").split("||");
+      const bankName = parts[0] || existing.bank_name || "";
+      const umkmId = parts[1] || "";
+      const campaignId = parts[2] || "";
+      const campaignName = parts[3] || "";
+      const currentStatus = parts[4] || existing.status;
+
+      const newStatus = updates.status !== undefined ? updates.status : currentStatus;
+      const dbStatus = newStatus === "approved_by_umkm" ? "pending" : newStatus;
+      const dbBankName = `${bankName}||${umkmId}||${campaignId}||${campaignName}||${newStatus}`;
+
+      const dbUpdates: any = {
+        status: dbStatus,
+        bank_name: dbBankName
+      };
 
       const { data, error } = await supabase
         .from("withdrawals")
@@ -358,7 +398,20 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return data as unknown as WithdrawalTx;
+      return {
+        id: data.id,
+        influencerId: data.influencer_id,
+        influencerName: data.influencer_name,
+        amount: Number(data.amount),
+        bankName,
+        accountNo: data.account_no,
+        accountHolder: data.account_holder,
+        status: newStatus as any,
+        date: data.date,
+        umkmId: umkmId || undefined,
+        campaignId: campaignId || undefined,
+        campaignName: campaignName || undefined
+      };
     }
   }
 };
