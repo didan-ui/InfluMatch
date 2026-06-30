@@ -19,6 +19,7 @@ import {
   ArrowRight, ExternalLink, RefreshCw, Star, Info, AlertTriangle, Users, MapPin, X, ShieldCheck
 } from "lucide-react";
 import CustomAlert from "./CustomAlert";
+import AvatarUpload from "./AvatarUpload";
 
 interface UmkmDashboardProps {
   currentUser: User;
@@ -592,6 +593,31 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
       }
       setShowProfileSuccess(true);
       setTimeout(() => setShowProfileSuccess(false), 2500);
+    }
+  };
+
+  const handleAvatarUploadSuccess = async (avatarUrl: string) => {
+    try {
+      const updated = await db.users.update(currentUser.id, {
+        avatarUrl: avatarUrl
+      });
+      if (updated && onUserUpdate) {
+        onUserUpdate(updated);
+        await addDbLog(currentUser.name, "Update Foto Profil", "Mengunggah foto profil baru", "umkm");
+        setAlertInfo({
+          isOpen: true,
+          title: "Foto Profil Diperbarui",
+          message: "Foto profil Anda berhasil diunggah dan disimpan ke server.",
+          type: "success"
+        });
+      }
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Memperbarui Foto",
+        message: err.message || "Terjadi kesalahan saat menyimpan foto profil.",
+        type: "error"
+      });
     }
   };
 
@@ -1819,6 +1845,16 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                     <span>Informasi usaha berhasil diperbarui di server lokal.</span>
                   </div>
                 )}
+
+                {/* Avatar Upload component */}
+                <div className="mb-6 pb-6 border-b border-brand-sand/50">
+                  <AvatarUpload
+                    currentAvatarUrl={currentUser.avatarUrl}
+                    userName={currentUser.name}
+                    userId={currentUser.id}
+                    onUploadSuccess={handleAvatarUploadSuccess}
+                  />
+                </div>
 
                 <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs font-bold uppercase tracking-wider text-brand-text-soft">
                   

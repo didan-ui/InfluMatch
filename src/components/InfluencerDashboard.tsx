@@ -15,6 +15,7 @@ import {
   Award, TrendingUp, Settings, MapPin, RefreshCw, Star, ExternalLink, HelpCircle, Search 
 } from "lucide-react";
 import CustomAlert from "./CustomAlert";
+import AvatarUpload from "./AvatarUpload";
 
 interface InfluencerDashboardProps {
   currentUser: User;
@@ -296,6 +297,31 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       }
       setShowSettingsSuccess(true);
       setTimeout(() => setShowSettingsSuccess(false), 2000);
+    }
+  };
+
+  const handleAvatarUploadSuccess = async (avatarUrl: string) => {
+    try {
+      const updated = await db.users.update(currentUser.id, {
+        avatarUrl: avatarUrl
+      });
+      if (updated && onUserUpdate) {
+        onUserUpdate(updated);
+        await addDbLog(currentUser.name, "Update Foto Profil", "Mengunggah foto profil baru", "influencer");
+        setAlertInfo({
+          isOpen: true,
+          title: "Foto Profil Diperbarui",
+          message: "Foto profil Anda berhasil diunggah dan disimpan ke server.",
+          type: "success"
+        });
+      }
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Memperbarui Foto",
+        message: err.message || "Terjadi kesalahan saat menyimpan foto profil.",
+        type: "error"
+      });
     }
   };
 
@@ -1269,6 +1295,16 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                     <span>Perubahan seteran metrik kreator Anda telah sukses disimpan!</span>
                   </div>
                 )}
+
+                {/* Avatar Upload component */}
+                <div className="mb-6 pb-6 border-b border-brand-sand/50">
+                  <AvatarUpload
+                    currentAvatarUrl={currentUser.avatarUrl}
+                    userName={currentUser.name}
+                    userId={currentUser.id}
+                    onUploadSuccess={handleAvatarUploadSuccess}
+                  />
+                </div>
 
                 <form onSubmit={handleUpdateSettings} className="space-y-4 text-xs font-bold uppercase tracking-wider text-brand-text-soft">
                   
