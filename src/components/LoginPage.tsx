@@ -8,9 +8,10 @@ interface LoginPageProps {
   onLoginSuccess: (user: User) => void;
   onNavigateToRegister: () => void;
   onNavigateToWelcome: () => void;
+  onNavigateToAdminLogin: () => void;
 }
 
-export default function LoginPage({ onLoginSuccess, onNavigateToRegister, onNavigateToWelcome }: LoginPageProps) {
+export default function LoginPage({ onLoginSuccess, onNavigateToRegister, onNavigateToWelcome, onNavigateToAdminLogin }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,19 +33,27 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister, onNavi
       return;
     }
 
-    if (foundUser.role === "admin") {
-      setError("Akses Ditolak. Akun Admin tidak dapat masuk melalui halaman login utama ini. Silakan gunakan portal khusus Admin.");
-      return;
-    }
-
     const hashedInput = await hashPassword(password);
     if (foundUser.password && foundUser.password !== hashedInput) {
       setError("Kata sandi salah. Silakan coba lagi.");
       return;
     }
 
+    if (foundUser.status === "banned") {
+      setError("Akun Anda telah DIBLOKIR secara permanen oleh Admin karena pelanggaran berat.");
+      return;
+    }
+    if (foundUser.status === "suspended") {
+      setError(`Akun Anda sedang DITANGGUHKAN sementara oleh Admin.${foundUser.statusReason ? ` Alasan: ${foundUser.statusReason}` : ""}`);
+      return;
+    }
+
     // Success!
-    addDbLog(foundUser.name, "Login Berhasil", `${foundUser.name} berhasil melakukan login sebagai ${foundUser.role.toUpperCase()}`, foundUser.role);
+    if (foundUser.role === "admin") {
+      addDbLog(foundUser.name, "Login Admin", "Administrator berhasil masuk sistem", "admin");
+    } else {
+      addDbLog(foundUser.name, "Login Berhasil", `${foundUser.name} berhasil melakukan login sebagai ${foundUser.role.toUpperCase()}`, foundUser.role);
+    }
     onLoginSuccess(foundUser);
   };
 
@@ -143,9 +152,19 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister, onNavi
             <span className="text-xs text-brand-text-soft">Belum terdaftar? </span>
             <button
               onClick={onNavigateToRegister}
-              className="text-xs text-brand-blush-dark font-bold hover:underline"
+              className="text-xs text-brand-blush-dark font-bold hover:underline cursor-pointer"
             >
               Daftar Sekarang
+            </button>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-brand-sand/45 text-center">
+            <button
+              type="button"
+              onClick={onNavigateToAdminLogin}
+              className="text-xs text-brand-text-soft hover:text-brand-text font-bold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              🛡️ Masuk sebagai Admin
             </button>
           </div>
         </div>

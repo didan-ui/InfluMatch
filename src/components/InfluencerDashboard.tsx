@@ -13,7 +13,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Inbox, Check, X, FileText, Send, DollarSign, Wallet, 
-  Award, TrendingUp, Settings, MapPin, RefreshCw, Star, ExternalLink, HelpCircle, Search, Camera
+  Award, TrendingUp, Settings, MapPin, RefreshCw, Star, ExternalLink, HelpCircle, Search, Camera, AlertTriangle, MessageSquare
 } from "lucide-react";
 
 interface InfluencerDashboardProps {
@@ -22,7 +22,14 @@ interface InfluencerDashboardProps {
 }
 
 export default function InfluencerDashboard({ currentUser, onUserUpdate }: InfluencerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"discover" | "invites" | "active" | "escrow" | "settings">("discover");
+  const [activeTab, setActiveTab] = useState<"discover" | "invites" | "active" | "escrow" | "settings" | "chat">("discover");
+  
+  // Chat state variables
+  const [selectedChatCampaignId, setSelectedChatCampaignId] = useState<string | null>(null);
+  const [selectedChatPartnerId, setSelectedChatPartnerId] = useState<string | null>(null);
+  const [selectedChatPartnerName, setSelectedChatPartnerName] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [newMessageText, setNewMessageText] = useState("");
   
   // Storage states
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -58,6 +65,13 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
   // UMKM Profile & Status update states
   const [selectedUmkm, setSelectedUmkm] = useState<User | null>(null);
   const [showUmkmProfileModal, setShowUmkmProfileModal] = useState(false);
+
+  // Report user states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTargetUser, setReportTargetUser] = useState<User | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportEvidenceUrl, setReportEvidenceUrl] = useState("");
 
   const handleViewUmkmProfile = (umkmId: string) => {
     const allUsers = getDbUsers();
@@ -120,6 +134,26 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
     setNiche(currentUser.niche || []);
     setWithdrawAccountHolder(currentUser.name);
   }, [currentUser]);
+
+  // Chat real-time polling and auto-read effect
+  useEffect(() => {
+    if (activeTab === "chat" && selectedChatCampaignId && selectedChatPartnerId) {
+      db.chats.markAsRead(selectedChatCampaignId, currentUser.id);
+      
+      const fetchMsgs = () => {
+        const list = db.chats.list().filter(m => m.campaignId === selectedChatCampaignId);
+        setChatMessages(list);
+      };
+      
+      fetchMsgs();
+      const interval = setInterval(() => {
+        fetchMsgs();
+        db.chats.markAsRead(selectedChatCampaignId, currentUser.id);
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, selectedChatCampaignId, selectedChatPartnerId, currentUser.id]);
 
   // Handle proactive campaign application (Tawaran UMKM)
   const applyForCampaign = (campaignId: string) => {
@@ -402,6 +436,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
             { id: "discover", label: "Tawaran UMKM (Cari Kerja)", icon: Search },
             { id: "invites", label: "Undangan Kerjasama", icon: Inbox, badge: incomingInvites.length },
             { id: "active", label: "Tugas Berjalan", icon: FileText, badge: activeCamps.length },
+            { id: "chat", label: "Diskusi Chat", icon: MessageSquare, badge: db.chats.unreadCount(currentUser.id) },
             { id: "escrow", label: "Dompet Saya", icon: Wallet },
             { id: "settings", label: "Atur Profil", icon: Settings }
           ].map(item => {
@@ -744,7 +779,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-brand-sand/50">
                       <div>
                         <h3 className="font-serif text-2xl font-bold text-brand-text">{camp.name}</h3>
-                        <p className="text-xs text-brand-text-soft mt-1 flex items-center gap-2">
+                        <div className="text-xs text-brand-text-soft mt-1 flex items-center flex-wrap gap-2">
                           <span>Pemilik usaha: <span className="font-bold text-brand-text">{camp.umkmName}</span></span>
                           <button 
                             onClick={() => handleViewUmkmProfile(camp.umkmId)}
@@ -752,7 +787,18 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                           >
                             • Lihat Profil UMKM
                           </button>
-                        </p>
+                          <button 
+                            onClick={() => {
+                              setSelectedChatCampaignId(camp.id);
+                              setSelectedChatPartnerId(camp.umkmId);
+                              setSelectedChatPartnerName(camp.umkmName);
+                              setActiveTab("chat");
+                            }}
+                            className="text-[10px] text-brand-sage-dark hover:underline font-bold cursor-pointer inline-flex items-center gap-0.5"
+                          >
+                            • 💬 Buka Chat
+                          </button>
+                        </div>
                       </div>
 
                       <div className="text-right">
@@ -1414,6 +1460,224 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
           </motion.div>
         )}
 
+        {/* TAB 6: REAL-TIME CHAT & DISCUSSIONS */}
+        {activeTab === "chat" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[calc(100vh-140px)] flex flex-col bg-brand-white border border-brand-sand rounded-[2rem] overflow-hidden shadow-sm select-text text-brand-text">
+            <div className="flex-1 flex divide-x divide-brand-sand/50 overflow-hidden">
+              
+              {/* Left Column: Chat Matches (Sidebar) */}
+              <div className="w-1/3 flex flex-col bg-brand-bg/25 overflow-y-auto">
+                <div className="p-4 border-b border-brand-sand/50">
+                  <h3 className="font-serif text-lg font-bold">Daftar Obrolan</h3>
+                  <p className="text-[10px] text-brand-text-soft mt-0.5">Partner UMKM kolaborasi aktif Anda</p>
+                </div>
+                
+                <div className="flex-1 divide-y divide-brand-sand/30">
+                  {(() => {
+                    const matches = getDbCampaigns().flatMap(camp => {
+                      const me = camp.influencers.find(i => i.influencerId === currentUser.id && i.status !== "applied" && i.status !== "invited");
+                      if (!me) return [];
+                      const umkmUser = getDbUsers().find(u => u.id === camp.umkmId);
+                      const unreads = db.chats.list().filter(m => m.campaignId === camp.id && m.senderId === camp.umkmId && !m.read).length;
+                      const campaignChats = db.chats.list().filter(m => m.campaignId === camp.id);
+                      const latestMsg = campaignChats.length > 0 ? campaignChats[campaignChats.length - 1] : null;
+
+                      return [{
+                        campaignId: camp.id,
+                        campaignName: camp.name,
+                        partnerId: camp.umkmId,
+                        partnerName: umkmUser?.brandName || umkmUser?.name || camp.umkmName,
+                        partnerAvatar: umkmUser?.avatarUrl,
+                        partnerCategory: umkmUser?.brandCategory || "Kuliner & Fashion",
+                        unreads,
+                        latestMsg
+                      }];
+                    });
+
+                    if (matches.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-xs text-brand-text-light font-medium leading-relaxed">
+                          Tidak ada partner kolaborasi aktif.<br/>
+                          <span className="text-[10px] text-brand-text-soft mt-1 block">Silakan tunggu pengajuan Anda diterima oleh UMKM atau terima undangan di tab "Undangan Kerjasama".</span>
+                        </div>
+                      );
+                    }
+
+                    return matches.map((m) => {
+                      const isActiveThread = selectedChatCampaignId === m.campaignId && selectedChatPartnerId === m.partnerId;
+                      return (
+                        <div
+                          key={`${m.campaignId}-${m.partnerId}`}
+                          onClick={() => {
+                            setSelectedChatCampaignId(m.campaignId);
+                            setSelectedChatPartnerId(m.partnerId);
+                            setSelectedChatPartnerName(m.partnerName);
+                            db.chats.markAsRead(m.campaignId, currentUser.id);
+                          }}
+                          className={`p-4 cursor-pointer hover:bg-brand-sage/10 transition-colors flex items-center justify-between gap-3 ${
+                            isActiveThread ? "bg-brand-sage/20" : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            {m.partnerAvatar && (m.partnerAvatar.startsWith("http") || m.partnerAvatar.startsWith("/") || m.partnerAvatar.startsWith("data:")) ? (
+                              <img src={m.partnerAvatar} alt={m.partnerName} className="w-10 h-10 rounded-full object-cover border border-brand-sand shrink-0" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-brand-sage text-brand-sage-dark font-bold text-xs flex items-center justify-center shrink-0">
+                                {m.partnerName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="overflow-hidden">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="text-xs font-bold truncate leading-none">{m.partnerName}</h4>
+                                <span className="text-[9px] text-brand-text-light font-mono truncate leading-none">Kategori: {m.partnerCategory}</span>
+                              </div>
+                              <p className="text-[10px] text-brand-text-soft truncate font-serif font-semibold mt-1 leading-none">Campaign: {m.campaignName}</p>
+                              <p className="text-[10px] text-brand-text-light truncate mt-1 max-w-[150px]">
+                                {m.latestMsg ? `${m.latestMsg.senderId === currentUser.id ? "Anda" : m.partnerName}: ${m.latestMsg.message}` : "Belum ada pesan."}
+                              </p>
+                            </div>
+                          </div>
+
+                          {m.unreads > 0 && (
+                            <span className="bg-red-500 text-brand-white text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold shrink-0">
+                              {m.unreads}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right Column: Chat Window */}
+              <div className="flex-1 flex flex-col bg-brand-white h-full relative overflow-hidden">
+                {selectedChatCampaignId && selectedChatPartnerId ? (
+                  <>
+                    {/* Active Chat Header */}
+                    <div className="p-4 border-b border-brand-sand/50 bg-brand-bg/10 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <h4 className="text-xs font-black tracking-wider uppercase text-brand-text-light leading-none">Chat Bersama</h4>
+                          <span className="font-serif text-base font-bold text-brand-text block mt-1">{selectedChatPartnerName}</span>
+                          <span className="text-[10px] bg-brand-sage text-brand-sage-dark font-bold px-2 py-0.5 rounded-md mt-1.5 inline-block">
+                            Program: {getDbCampaigns().find(c => c.id === selectedChatCampaignId)?.name || "Campaign Aktif"}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          handleViewUmkmProfile(selectedChatPartnerId);
+                        }}
+                        className="px-3 py-1.5 bg-brand-white border border-brand-sand rounded-xl text-[10px] font-bold text-brand-text-soft hover:bg-brand-bg transition-colors"
+                      >
+                        Lihat Profil UMKM
+                      </button>
+                    </div>
+
+                    {/* Chat Messages Body */}
+                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#FCFAF7]/40 flex flex-col">
+                      {chatMessages.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-brand-text-soft space-y-2">
+                          <span className="text-2xl">💬</span>
+                          <p className="text-xs font-semibold">Memulai Diskusi Kerjasama</p>
+                          <p className="text-[10px] text-brand-text-light max-w-xs">Diskusikan draf konten, ide kreatif, link live konten, dan kesepakatan penulisan brief naskah secara santun.</p>
+                        </div>
+                      ) : (
+                        chatMessages.map((msg) => {
+                          const isMe = msg.senderId === currentUser.id;
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex flex-col max-w-[75%] ${
+                                isMe ? "self-end items-end" : "self-start items-start"
+                              }`}
+                            >
+                              <div className="text-[9px] text-brand-text-light font-bold mb-1 px-1">
+                                {isMe ? "Anda" : selectedChatPartnerName}
+                              </div>
+                              <div
+                                className={`p-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
+                                  isMe
+                                    ? "bg-brand-text text-brand-white rounded-tr-none"
+                                    : "bg-brand-bg border border-brand-sand/50 text-brand-text rounded-tl-none"
+                                }`}
+                              >
+                                {msg.message}
+                              </div>
+                              <div className="text-[8px] text-brand-text-light font-mono mt-1 px-1 flex items-center gap-1">
+                                {new Date(msg.timestamp).toLocaleTimeString("id-ID", {
+                                  hour: "2-digit",
+                                  minute: "2-digit"
+                                })}
+                                {isMe && (
+                                  <span className="text-brand-sage-dark font-sans font-bold">
+                                    {msg.read ? "✓✓ Terbaca" : "✓ Terkirim"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Chat Input Bar */}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!newMessageText.trim()) return;
+                        
+                        const newMsg = {
+                          id: "msg-" + Date.now(),
+                          campaignId: selectedChatCampaignId,
+                          senderId: currentUser.id,
+                          receiverId: selectedChatPartnerId,
+                          message: newMessageText,
+                          read: false,
+                          timestamp: new Date().toISOString()
+                        };
+                        
+                        db.chats.save(newMsg);
+                        setChatMessages(prev => [...prev, newMsg]);
+                        setNewMessageText("");
+                        forceRefresh();
+                      }}
+                      className="p-4 border-t border-brand-sand/50 bg-brand-white flex gap-2 items-center"
+                    >
+                      <input
+                        type="text"
+                        value={newMessageText}
+                        onChange={(e) => setNewMessageText(e.target.value)}
+                        placeholder={`Tulis pesan Anda ke ${selectedChatPartnerName}...`}
+                        className="flex-1 border border-brand-sand bg-brand-bg/30 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-brand-text text-brand-text"
+                      />
+                      <button
+                        type="submit"
+                        className="px-5 py-3 rounded-2xl bg-brand-text text-brand-white text-xs font-bold hover:opacity-95 active:scale-95 transition-all flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Kirim</span>
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-brand-text-soft bg-brand-bg/10">
+                    <div className="w-16 h-16 rounded-full bg-brand-sage/30 flex items-center justify-center text-2xl mb-4 animate-bounce">
+                      💬
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-brand-text">Pusat Hubungan Chat</h3>
+                    <p className="text-xs text-brand-text-soft max-w-sm mt-1.5 leading-relaxed">
+                      Silakan pilih salah satu daftar obrolan aktif di panel kiri untuk berkoordinasi langsung dengan partner bisnis UMKM Anda.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+
       </main>
 
       {/* SME PROFILE VIEW MODAL */}
@@ -1493,14 +1757,141 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowUmkmProfileModal(false)}
-                  className="w-full py-3 rounded-2xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-95 transition-all cursor-pointer shadow-md mt-2"
-                >
-                  Tutup Profil Partner
-                </button>
+                <div className="flex flex-col gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      setShowUmkmProfileModal(false);
+                      setReportTargetUser(selectedUmkm);
+                      setShowReportModal(true);
+                    }}
+                    className="w-full py-2.5 rounded-2xl border border-red-200 text-red-600 bg-red-50/50 hover:bg-red-50 font-bold text-xs hover:opacity-95 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" /> Laporkan Pengguna
+                  </button>
+                  <button
+                    onClick={() => setShowUmkmProfileModal(false)}
+                    className="w-full py-3 rounded-2xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-95 transition-all cursor-pointer shadow-md text-center"
+                  >
+                    Tutup Profil Partner
+                  </button>
+                </div>
               </div>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* REPORT USER MODAL */}
+      <AnimatePresence>
+        {showReportModal && reportTargetUser && (
+          <div className="fixed inset-0 z-[100] overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 py-8">
+              <div className="fixed inset-0 bg-brand-text/50 backdrop-blur-xs transition-opacity animate-fade-in" onClick={() => setShowReportModal(false)}></div>
+              
+              <motion.div 
+                initial={{ transform: "scale(0.95)", opacity: 0 }}
+                animate={{ transform: "scale(1)", opacity: 1 }}
+                exit={{ transform: "scale(0.95)", opacity: 0 }}
+                className="bg-brand-white rounded-3xl overflow-hidden shadow-xl max-w-md w-full p-6 z-10 border border-brand-sand relative font-sans text-brand-text"
+              >
+                <div className="flex items-center gap-2.5 border-b border-brand-sand pb-3.5 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-base font-bold">Laporkan {reportTargetUser.brandName || reportTargetUser.name}</h3>
+                    <p className="text-[10px] text-brand-text-light font-bold uppercase tracking-wider">Aduan Pelanggaran Komunitas</p>
+                  </div>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!reportReason) {
+                    alert("Harap pilih alasan laporan");
+                    return;
+                  }
+                  
+                  const reportData = {
+                    id: "rep-" + Date.now(),
+                    reporterId: currentUser.id,
+                    reporterName: currentUser.name,
+                    reporterRole: currentUser.role,
+                    reportedId: reportTargetUser.id,
+                    reportedName: reportTargetUser.brandName || reportTargetUser.name,
+                    reportedRole: reportTargetUser.role,
+                    reason: reportReason,
+                    description: reportDescription,
+                    evidenceUrl: reportEvidenceUrl,
+                    status: 'pending' as const,
+                    createdAt: new Date().toISOString()
+                  };
+                  
+                  db.reports.save(reportData);
+                  addDbLog(currentUser.name, "Laporkan Pengguna", `Melaporkan pengguna ${reportTargetUser.brandName || reportTargetUser.name} atas: ${reportReason}`, currentUser.role);
+                  
+                  alert("Laporan Anda berhasil dikirim ke Admin Utama untuk diinvestigasi.");
+                  setShowReportModal(false);
+                  setReportReason("");
+                  setReportDescription("");
+                  setReportEvidenceUrl("");
+                }} className="space-y-4 text-xs font-semibold">
+                  <div>
+                    <label className="block text-brand-text-soft uppercase tracking-wider text-[10px] font-bold mb-1.5">Alasan Pelanggaran</label>
+                    <select
+                      required
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      className="w-full border border-brand-sand bg-brand-bg/45 rounded-2xl px-4 py-3 text-xs text-brand-text font-serif focus:outline-none focus:border-brand-text/50 cursor-pointer"
+                    >
+                      <option value="">-- Pilih Alasan Pelanggaran --</option>
+                      <option value="Wanprestasi / Pembayaran Macet">Wanprestasi / Menunda Pembayaran Sepihak</option>
+                      <option value="Pelecehan / Komentar Kasar">Pelecehan Verbal / Komentar Kasar / Intimidasi</option>
+                      <option value="Spam / Indikasi Penipuan">Spam / Penipuan Kontrak / Akun Palsu</option>
+                      <option value="Lainnya">Pelanggaran Lainnya</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-brand-text-soft uppercase tracking-wider text-[10px] font-bold mb-1.5">Deskripsi Kejadian / Kronologi</label>
+                    <textarea
+                      required
+                      value={reportDescription}
+                      onChange={(e) => setReportDescription(e.target.value)}
+                      placeholder="Tuliskan kronologi lengkap kejadian agar admin dapat menginvestigasi secara mendalam..."
+                      rows={4}
+                      className="w-full border border-brand-sand bg-brand-bg/45 rounded-2xl px-4 py-3 text-xs font-medium text-brand-text focus:outline-none focus:border-brand-text"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-brand-text-soft uppercase tracking-wider text-[10px] font-bold mb-1.5">Link Bukti Pendukung (Opsional)</label>
+                    <input
+                      type="text"
+                      value={reportEvidenceUrl}
+                      onChange={(e) => setReportEvidenceUrl(e.target.value)}
+                      placeholder="Masukkan link bukti pendukung (Google Drive, tangkapan layar, dsb)"
+                      className="w-full border border-brand-sand bg-brand-bg/45 rounded-2xl px-4 py-3 text-xs text-brand-text focus:outline-none focus:border-brand-text"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowReportModal(false)}
+                      className="flex-1 py-3 border border-brand-sand rounded-2xl text-xs font-bold text-brand-text-soft hover:bg-brand-bg transition-colors cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-brand-white rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-md"
+                    >
+                      Kirim Laporan
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>

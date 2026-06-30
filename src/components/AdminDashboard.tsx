@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx } from "../types";
+import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx, Report } from "../types";
 import { 
   getDbUsers, 
   getDbCampaigns, 
@@ -16,7 +16,7 @@ import { motion } from "motion/react";
 import { 
   ShieldCheck, Users, Wallet, FileText, Check, X, 
   AlertTriangle, Hammer, RefreshCw, Trash2, Database, Award, ClipboardList, Search,
-  MapPin, ExternalLink 
+  MapPin, ExternalLink, ShieldAlert
 } from "lucide-react";
 
 interface AdminDashboardProps {
@@ -24,7 +24,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"users" | "campaigns" | "escrows" | "logs">("users");
+  const [activeSubTab, setActiveSubTab] = useState<"users" | "campaigns" | "escrows" | "logs" | "reports">("users");
 
   // Database lists
   const [users, setUsers] = useState<User[]>([]);
@@ -32,6 +32,13 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [escrows, setEscrows] = useState<EscrowTx[]>([]);
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalTx[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+
+  // Report resolution modal states
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [investigationNotes, setInvestigationNotes] = useState("");
+  const [sanctionType, setSanctionType] = useState<'none' | 'warning' | 'suspend' | 'ban'>('none');
+  const [suspendReason, setSuspendReason] = useState("");
 
   // Campaigns monitoring search and status filters
   const [campSearch, setCampSearch] = useState("");
@@ -44,6 +51,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     setEscrows(getDbEscrow());
     setLogs(getDbLogs());
     setWithdrawals(db.withdrawals.list());
+    setReports(db.reports.list());
   };
 
   useEffect(() => {
@@ -73,11 +81,13 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   };
 
   const handleRejectWithdrawal = (wId: string) => {
-    const updated = db.withdrawals.update(wId, { status: "rejected" });
+    const reason = window.prompt("Masukkan alasan penolakan pencairan dana:");
+    if (reason === null) return; // user cancelled
+    const updated = db.withdrawals.update(wId, { status: "rejected", reason: reason || "Data rekening tidak valid" } as any);
     if (updated) {
-      addDbLog("Admin", "Penolakan Tarik Dana", `Menolak pengajuan pencairan dana Rp${updated.amount.toLocaleString()} milik ${updated.influencerName}`, "admin");
+      addDbLog("Admin", "Penolakan Tarik Dana", `Menolak pengajuan pencairan dana Rp${updated.amount.toLocaleString()} milik ${updated.influencerName}. Alasan: ${reason || "Data rekening tidak valid"}`, "admin");
       forceRefresh();
-      alert(`Pencairan dana ${updated.influencerName} ditolak.`);
+      alert(`Pencairan dana ${updated.influencerName} ditolak. Alasan: ${reason || "Data rekening tidak valid"}`);
     }
   };
 
@@ -87,6 +97,50 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     addDbLog(currentUser.name, "Penolakan User", `Admin menolak/menghapus akun ${userName}`, "admin");
     forceRefresh();
     alert(`Akun ${userName} ditolak & dihapus.`);
+  };
+
+  // Sanksi & Pemblokiran Pengguna
+  const handleSuspendUser = (userId: string, userName: string, reason: string) => {
+    const freshUser = db.users.find(userId);
+    if (freshUser) {
+      db.users.update(userId, { status: "suspended", statusReason: reason });
+      addDbLog(currentUser.name, "Sanksi Suspend", `Membekukan sementara akun ${userName}. Alasan: ${reason}`, "admin");
+      forceRefresh();
+      alert(`Akun ${userName} berhasil DITANGGUHKAN sementara.`);
+    }
+  };
+
+  const handleBanUser = (userId: string, userName: string) => {
+    const freshUser = db.users.find(userId);
+    if (freshUser) {
+      db.users.update(userId, { status: "banned", statusReason: "Pelanggaran berat regulasi platform." });
+      addDbLog(currentUser.name, "Sanksi Banned", `Memblokir permanen akun ${userName}`, "admin");
+      forceRefresh();
+      alert(`Akun ${userName} berhasil DIBLOKIR secara permanen.`);
+    }
+  };
+
+  const handleRestoreUser = (userId: string, userName: string) => {
+    const freshUser = db.users.find(userId);
+    if (freshUser) {
+      db.users.update(userId, { status: "active", statusReason: "" });
+      addDbLog(currentUser.name, "Unban Pengguna", `Mengaktifkan kembali akun ${userName}`, "admin");
+      forceRefresh();
+      alert(`Akun ${userName} berhasil diaktifkan kembali.`);
+    }
+  };
+
+  const handleWarnUser = (userId: string, userName: string) => {
+    const reason = window.prompt(`Masukkan alasan Peringatan (Warning) untuk ${userName}:`);
+    if (reason === null) return;
+    const freshUser = db.users.find(userId);
+    if (freshUser) {
+      const nextCount = (freshUser.warningsCount || 0) + 1;
+      db.users.update(userId, { warningsCount: nextCount });
+      addDbLog(currentUser.name, "Sanksi Peringatan", `Memberikan peringatan ke-${nextCount} kepada ${userName}. Alasan: ${reason || "Pelanggaran ringan"}`, "admin");
+      forceRefresh();
+      alert(`Peringatan ke-${nextCount} berhasil dikirim kepada ${userName}.`);
+    }
   };
 
   // Handle forcing release of escrow in dispute scenario
@@ -173,6 +227,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
           <p className="px-3 text-xs tracking-widest font-bold text-brand-text-light uppercase mb-2 select-none font-sans">Menu Kontrol</p>
           {[
             { id: "users", label: "Kelola Pendaftar", icon: Users, badge: pendingApprovals.length },
+            { id: "reports", label: "Kelola Laporan", icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
             { id: "campaigns", label: "Pantau Kampanye", icon: FileText },
             { id: "escrows", label: "Verifikasi Pembayaran", icon: Wallet },
             { id: "logs", label: "Catatan Aktivitas", icon: ClipboardList }
@@ -204,18 +259,6 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
               </button>
             );
           })}
-        </div>
-
-        {/* Database diagnostic panel */}
-        <div className="mt-12 px-4 pt-6 border-t border-brand-sand/65 space-y-3">
-          <p className="px-3 text-[10px] font-bold text-brand-text-light uppercase select-none tracking-wider">DIAGNOSTIK TEKNIS</p>
-          
-          <button
-            onClick={handleResetDb}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-700 bg-red-50/40 hover:bg-red-50 text-[11px] font-bold transition-all cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" /> Reset DB Platform
-          </button>
         </div>
       </aside>
 
@@ -345,28 +388,79 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         </td>
                         <td className="py-3.5 px-4 text-brand-text-soft">{u.city || "Malang, Jatim"}</td>
                         <td className="py-3.5 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] ${
-                            u.isApproved ? "bg-brand-sage text-brand-sage-dark" : "bg-yellow-105 bg-[#FDF2CB] text-[#907010]"
-                          }`}>
-                            {u.isApproved ? "Aktif" : "Menunggu Approval"}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] w-fit ${
+                              u.status === "banned" ? "bg-red-100 text-red-800" :
+                              u.status === "suspended" ? "bg-orange-100 text-orange-800" :
+                              u.isApproved ? "bg-brand-sage text-brand-sage-dark" : "bg-yellow-105 bg-[#FDF2CB] text-[#907010]"
+                            }`}>
+                              {u.status === "banned" ? "DIBLOKIR" :
+                               u.status === "suspended" ? "DITANGGUHKAN" :
+                               u.isApproved ? "Aktif" : "Menunggu Approval"}
+                            </span>
+                            {u.warningsCount !== undefined && u.warningsCount > 0 && (
+                              <span className="text-[10px] text-orange-700 font-bold font-mono">
+                                ⚠️ Warning: {u.warningsCount}
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-3.5 px-4 text-right flex gap-1.5 justify-end">
+                        <td className="py-3.5 px-4 text-right flex flex-wrap gap-1.5 justify-end items-center">
                           {!u.isApproved && (
                             <button
                               onClick={() => handleApproveUser(u.id, u.name)}
-                              className="px-2.5 py-1.5 bg-brand-text text-brand-white font-bold rounded-lg hover:opacity-90 transition-all text-[11px] flex items-center gap-1 cursor-pointer"
+                              className="px-2 py-1 bg-brand-text text-brand-white font-bold rounded-lg hover:opacity-90 transition-all text-[10px] flex items-center gap-0.5 cursor-pointer"
                             >
                               <Check className="w-3 h-3 text-brand-sage-dark" /> Setujui
                             </button>
                           )}
                           {u.id !== currentUser.id && (
-                            <button
-                              onClick={() => handleRejectUser(u.id, u.name)}
-                              className="px-2.5 py-1.5 border border-brand-sand text-brand-text-soft hover:bg-brand-bg rounded-lg transition-all text-[11px] cursor-pointer"
-                            >
-                              Hapus
-                            </button>
+                            <>
+                              {u.status === "suspended" || u.status === "banned" ? (
+                                <button
+                                  onClick={() => handleRestoreUser(u.id, u.name)}
+                                  className="px-2 py-1 bg-brand-sage text-brand-sage-dark hover:opacity-95 font-bold rounded-lg transition-all text-[10px] cursor-pointer"
+                                >
+                                  Aktifkan Kembali
+                                </button>
+                              ) : (
+                                <div className="flex gap-1.5 flex-wrap">
+                                  <button
+                                    onClick={() => handleWarnUser(u.id, u.name)}
+                                    className="px-2 py-1 bg-yellow-100 text-[#907010] hover:bg-yellow-200 font-bold rounded-lg transition-all text-[10px] cursor-pointer"
+                                  >
+                                    Beri Warning
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const reason = window.prompt(`Masukkan alasan suspend untuk ${u.name}:`);
+                                      if (reason !== null) {
+                                        handleSuspendUser(u.id, u.name, reason || "Pelanggaran pedoman komunitas");
+                                      }
+                                    }}
+                                    className="px-2 py-1 bg-orange-100 text-orange-700 hover:bg-orange-200 font-bold rounded-lg transition-all text-[10px] cursor-pointer"
+                                  >
+                                    Suspend
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`Yakin ingin memblokir permanen (Ban) ${u.name}?`)) {
+                                        handleBanUser(u.id, u.name);
+                                      }
+                                    }}
+                                    className="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 font-bold rounded-lg transition-all text-[10px] cursor-pointer"
+                                  >
+                                    Ban
+                                  </button>
+                                </div>
+                              )}
+                              <button
+                                onClick={() => handleRejectUser(u.id, u.name)}
+                                className="px-2 py-1 border border-brand-sand text-brand-text-soft hover:bg-brand-bg rounded-lg transition-all text-[10px] cursor-pointer"
+                              >
+                                Hapus
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -752,6 +846,277 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                 )}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeSubTab === "reports" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 animate-fadeIn">
+            <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm overflow-hidden space-y-4">
+              <div>
+                <h3 className="font-serif text-xl font-bold text-brand-text">Manajemen Laporan Pengguna</h3>
+                <p className="text-xs text-brand-text-soft leading-relaxed">Tinjau laporan pelanggaran yang diajukan oleh UMKM maupun Influencer terhadap aktivitas mencurigakan atau wanprestasi.</p>
+              </div>
+
+              <div className="overflow-x-auto pt-2">
+                <table className="w-full text-left text-xs text-brand-text select-text">
+                  <thead className="bg-brand-bg text-brand-text-soft uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="py-3 px-4 border-b border-brand-sand">PELAPOR</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">TERLAPOR</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">ALASAN</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">DESKRIPSI</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">TANGGAL</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">STATUS</th>
+                      <th className="py-3 px-4 border-b border-brand-sand text-right">AKSI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-sand/50">
+                    {reports.map(r => (
+                      <tr key={r.id} className="hover:bg-brand-bg/10">
+                        <td className="py-3.5 px-4 font-bold">
+                          <div>
+                            <span>{r.reporterName}</span>
+                            <span className="text-[9px] block text-brand-text-light uppercase font-mono">{r.reporterRole}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-red-750">
+                          <div>
+                            <span>{r.reportedName}</span>
+                            <span className="text-[9px] block text-brand-text-light uppercase font-mono">{r.reportedRole}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium">{r.reason}</td>
+                        <td className="py-3.5 px-4 text-brand-text-soft truncate max-w-xs">{r.description}</td>
+                        <td className="py-3.5 px-4 font-mono">{new Date(r.createdAt).toLocaleDateString("id-ID", { hour: "2-digit", minute: "2-digit" })}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] ${
+                            r.status === 'resolved' ? 'bg-brand-sage text-brand-sage-dark' :
+                            r.status === 'under_review' ? 'bg-amber-100 text-amber-800' :
+                            r.status === 'rejected' ? 'bg-red-50 text-red-700 bg-red-100/60' : 'bg-brand-sky text-brand-sky-dark'
+                          }`}>
+                            {r.status === 'resolved' ? 'Selesai' :
+                             r.status === 'under_review' ? 'Diproses' :
+                             r.status === 'rejected' ? 'Ditolak' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedReport(r);
+                              setInvestigationNotes(r.notes || "");
+                              setSanctionType(r.sanctionType || "none");
+                              setSuspendReason("");
+                            }}
+                            className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-lg hover:opacity-95 text-[11px] cursor-pointer"
+                          >
+                            Tinjau Laporan
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {reports.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-10 text-center text-brand-text-soft">Tidak ada laporan yang masuk saat ini.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Selected Report Detail & Investigation Modal */}
+            {selectedReport && (
+              <div className="fixed inset-0 bg-brand-text/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+                <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between border-b border-brand-sand pb-3">
+                    <h4 className="font-serif text-lg font-bold text-brand-text">Detail & Investigasi Laporan</h4>
+                    <button 
+                      onClick={() => setSelectedReport(null)}
+                      className="text-brand-text-soft hover:text-brand-text text-lg cursor-pointer font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 text-xs leading-relaxed">
+                    <div className="grid grid-cols-2 gap-4 bg-brand-bg/50 p-4 rounded-2xl border border-brand-sand/40">
+                      <div>
+                        <p className="font-bold text-brand-text-light uppercase tracking-wider text-[9px]">Pelapor</p>
+                        <p className="font-semibold text-brand-text text-sm">{selectedReport.reporterName}</p>
+                        <p className="font-mono text-brand-text-soft uppercase text-[9px]">{selectedReport.reporterRole}</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-brand-text-light uppercase tracking-wider text-[9px]">Terlapor (Pelaku)</p>
+                        <p className="font-semibold text-brand-text text-sm text-red-600">{selectedReport.reportedName}</p>
+                        <p className="font-mono text-brand-text-soft uppercase text-[9px]">{selectedReport.reportedRole}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-brand-text-light uppercase tracking-wider text-[9px] mb-1">Alasan Laporan</p>
+                      <p className="font-semibold text-brand-text bg-brand-bg/50 px-3 py-2 rounded-xl">{selectedReport.reason}</p>
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-brand-text-light uppercase tracking-wider text-[9px] mb-1">Deskripsi Kejadian</p>
+                      <div className="bg-brand-bg/50 px-3 py-2 rounded-xl text-brand-text whitespace-pre-wrap">{selectedReport.description}</div>
+                    </div>
+
+                    {selectedReport.evidenceUrl && (
+                      <div>
+                        <p className="font-bold text-brand-text-light uppercase tracking-wider text-[9px] mb-1.5">Bukti Pendukung</p>
+                        <div className="border border-brand-sand rounded-2xl overflow-hidden bg-brand-bg/10 p-2 max-w-sm">
+                          {selectedReport.evidenceUrl.startsWith("data:image") || selectedReport.evidenceUrl.startsWith("http") ? (
+                            <img 
+                              src={selectedReport.evidenceUrl} 
+                              alt="Bukti Laporan" 
+                              className="max-h-48 rounded-xl object-contain mx-auto" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <a 
+                              href={selectedReport.evidenceUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-brand-blush-dark hover:underline font-bold"
+                            >
+                              📎 Buka Dokumen Bukti
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <hr className="border-brand-sand/50" />
+
+                    <div className="space-y-3">
+                      <h5 className="font-bold text-brand-text text-sm">Tindakan Investigasi Admin</h5>
+                      
+                      <div>
+                        <label className="block text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-1">Ubah Status Laporan</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {(['pending', 'under_review', 'resolved', 'rejected'] as const).map(st => {
+                            const label = st === 'pending' ? 'Pending' :
+                                          st === 'under_review' ? 'Diproses' :
+                                          st === 'resolved' ? 'Selesai' : 'Ditolak';
+                            const activeColor = st === 'resolved' ? 'bg-brand-sage text-brand-sage-dark' :
+                                                st === 'under_review' ? 'bg-amber-100 text-amber-800' :
+                                                st === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-brand-sky text-brand-sky-dark';
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => {
+                                  const updated = db.reports.update(selectedReport.id, { status: st });
+                                  if (updated) setSelectedReport(updated);
+                                  forceRefresh();
+                                }}
+                                className={`py-2 rounded-xl font-bold transition-all text-center cursor-pointer text-[11px] ${
+                                  selectedReport.status === st ? activeColor : 'bg-brand-bg text-brand-text-soft hover:bg-brand-bg/80'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-1">Berikan Sanksi Pelaku (Bila Laporan Valid)</label>
+                        <select
+                          value={sanctionType}
+                          onChange={(e) => setSanctionType(e.target.value as any)}
+                          className="w-full bg-brand-bg border border-brand-sand rounded-xl p-2.5 text-xs font-bold text-brand-text outline-none focus:border-brand-text/50"
+                        >
+                          <option value="none">Tanpa Sanksi</option>
+                          <option value="warning">Peringatan (Warning)</option>
+                          <option value="suspend">Pembekuan Sementara (Suspend)</option>
+                          <option value="ban">Pemblokiran Permanen (Ban)</option>
+                        </select>
+                      </div>
+
+                      {sanctionType === "suspend" && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-1">Durasi / Alasan Pembekuan</label>
+                          <input
+                            type="text"
+                            value={suspendReason}
+                            onChange={(e) => setSuspendReason(e.target.value)}
+                            placeholder="Contoh: Pembekuan 7 hari karena wanprestasi campaign"
+                            className="w-full bg-brand-bg border border-brand-sand rounded-xl p-2.5 text-xs text-brand-text outline-none focus:border-brand-text"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-1">Catatan Investigasi / Tanggapan Admin</label>
+                        <textarea
+                          value={investigationNotes}
+                          onChange={(e) => setInvestigationNotes(e.target.value)}
+                          placeholder="Tulis hasil penelusuran atau tanggapan investigasi di sini..."
+                          rows={3}
+                          className="w-full bg-brand-bg border border-brand-sand rounded-xl p-2.5 text-xs text-brand-text outline-none focus:border-brand-text"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-3 border-t border-brand-sand/50">
+                    <button
+                      onClick={() => setSelectedReport(null)}
+                      className="flex-1 py-3 border border-brand-sand rounded-xl text-xs font-bold text-brand-text-soft hover:bg-brand-bg transition-all cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Apply the investigation results
+                        const updatedReport = db.reports.update(selectedReport.id, {
+                          notes: investigationNotes,
+                          sanctionType: sanctionType,
+                          status: 'resolved' // auto-resolve if sanction is made
+                        });
+
+                        // Apply actual sanction to reported user
+                        const reportedUser = db.users.find(selectedReport.reportedId);
+                        if (reportedUser) {
+                          if (sanctionType === 'warning') {
+                            reportedUser.warningsCount = (reportedUser.warningsCount || 0) + 1;
+                            db.users.update(reportedUser.id, { warningsCount: reportedUser.warningsCount });
+                            addDbLog(currentUser.name, "Sanksi Peringatan", `Memberikan sanksi peringatan ke-${reportedUser.warningsCount} kepada ${reportedUser.name} atas laporan #${selectedReport.id}`, "admin");
+                            alert(`Sanksi Peringatan berhasil diberikan ke ${reportedUser.name}.`);
+                          } else if (sanctionType === 'suspend') {
+                            db.users.update(reportedUser.id, { 
+                              status: 'suspended',
+                              statusReason: suspendReason || investigationNotes || "Pelanggaran pedoman komunitas."
+                            });
+                            addDbLog(currentUser.name, "Sanksi Suspend", `Membekukan sementara akun ${reportedUser.name}. Alasan: ${suspendReason || investigationNotes}`, "admin");
+                            alert(`Akun ${reportedUser.name} berhasil dibekukan.`);
+                          } else if (sanctionType === 'ban') {
+                            db.users.update(reportedUser.id, { 
+                              status: 'banned',
+                              statusReason: investigationNotes || "Pelanggaran berat berkelanjutan."
+                            });
+                            addDbLog(currentUser.name, "Sanksi Banned", `Memblokir permanen akun ${reportedUser.name}. Catatan: ${investigationNotes}`, "admin");
+                            alert(`Akun ${reportedUser.name} berhasil dibanned.`);
+                          } else {
+                            addDbLog(currentUser.name, "Investigasi Laporan", `Menyelesaikan laporan #${selectedReport.id} tanpa sanksi. Catatan: ${investigationNotes}`, "admin");
+                            alert(`Laporan diselesaikan tanpa pemberian sanksi.`);
+                          }
+                        }
+
+                        setSelectedReport(null);
+                        forceRefresh();
+                      }}
+                      className="flex-grow flex-1 py-3 bg-brand-text text-brand-white rounded-xl text-xs font-bold uppercase tracking-wider hover:opacity-95 transition-all cursor-pointer"
+                    >
+                      Simpan Investigasi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 

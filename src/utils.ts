@@ -1,4 +1,4 @@
-import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx } from "./types";
+import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx, Report, ChatMessage } from "./types";
 import { supabaseDb, uploadAvatarToSupabase } from "./lib/supabase";
 
 // Seed data
@@ -405,6 +405,37 @@ export function saveDbWithdrawal(w: WithdrawalTx) {
   localStorage.setItem("im_withdrawals", JSON.stringify(ws));
 }
 
+export function getDbReports(): Report[] {
+  if (typeof window === "undefined") return [];
+  const reports = localStorage.getItem("im_reports");
+  return reports ? JSON.parse(reports) : [];
+}
+
+export function saveDbReport(r: Report) {
+  const reports = getDbReports();
+  const existingIdx = reports.findIndex(x => x.id === r.id);
+  if (existingIdx > -1) {
+    reports[existingIdx] = r;
+  } else {
+    reports.push(r);
+  }
+  localStorage.setItem("im_reports", JSON.stringify(reports));
+  return r;
+}
+
+export function getDbChats(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+  const chats = localStorage.getItem("im_chats");
+  return chats ? JSON.parse(chats) : [];
+}
+
+export function saveDbChat(m: ChatMessage) {
+  const chats = getDbChats();
+  chats.push(m);
+  localStorage.setItem("im_chats", JSON.stringify(chats));
+  return m;
+}
+
 // Reset LocalStorage back to pristine seed (utility to let users test from scratch)
 export function resetDatabase() {
   localStorage.removeItem("im_users");
@@ -412,6 +443,8 @@ export function resetDatabase() {
   localStorage.removeItem("im_escrow");
   localStorage.removeItem("im_withdrawals");
   localStorage.removeItem("im_logs");
+  localStorage.removeItem("im_reports");
+  localStorage.removeItem("im_chats");
   getDbUsers();
   getDbCampaigns();
   getDbEscrow();
@@ -515,6 +548,40 @@ export const db = {
         return ws[idx];
       }
       return null;
+    }
+  },
+  reports: {
+    list: getDbReports,
+    save: saveDbReport,
+    update: (id: string, updates: Partial<Report>) => {
+      const rs = getDbReports();
+      const idx = rs.findIndex(x => x.id === id);
+      if (idx > -1) {
+        rs[idx] = { ...rs[idx], ...updates };
+        localStorage.setItem("im_reports", JSON.stringify(rs));
+        return rs[idx];
+      }
+      return null;
+    }
+  },
+  chats: {
+    list: getDbChats,
+    save: saveDbChat,
+    unreadCount: (userId: string) => {
+      return getDbChats().filter(m => m.receiverId === userId && !m.read).length;
+    },
+    markAsRead: (campaignId: string, userId: string) => {
+      const chats = getDbChats();
+      let changed = false;
+      chats.forEach(m => {
+        if (m.campaignId === campaignId && m.receiverId === userId && !m.read) {
+          m.read = true;
+          changed = true;
+        }
+      });
+      if (changed) {
+        localStorage.setItem("im_chats", JSON.stringify(chats));
+      }
     }
   }
 };

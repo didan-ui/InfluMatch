@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User } from "./types";
-import { getDbUsers, isSupabaseConfigured, syncFromSupabase } from "./utils";
+import { getDbUsers, isSupabaseConfigured, syncFromSupabase, db } from "./utils";
 import WelcomePage from "./components/WelcomePage";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
@@ -142,6 +142,7 @@ export default function App() {
               onLoginSuccess={handleLoginSuccess}
               onNavigateToRegister={() => setScreen("register")}
               onNavigateToWelcome={() => setScreen("welcome")}
+              onNavigateToAdminLogin={() => setScreen("admin-login")}
             />
           </motion.div>
         )}
@@ -184,39 +185,72 @@ export default function App() {
           </motion.div>
         )}
 
-        {screen === "main" && currentUser && (
-          <motion.div 
-            key="main" 
-            initial={{ opacity: 0, y: 5 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0 }}
-            className="flex-grow flex flex-col"
-          >
-            {/* Nav Header Row */}
-            <Topbar currentUser={currentUser} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />
-
-            {/* Main Application Area (Dynamic Role dashboard) */}
-            <div className="flex-1 flex flex-col md:flex-row">
-              {currentUser.role === "umkm" && (
-                <div className="flex-1">
-                  <UmkmDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
+        {screen === "main" && currentUser && (() => {
+          const freshUser = db.users.find(currentUser.id);
+          const isBlocked = freshUser?.status === "suspended" || freshUser?.status === "banned";
+          
+          if (isBlocked) {
+            return (
+              <div className="min-h-screen bg-brand-bg flex items-center justify-center p-6 font-sans w-full">
+                <div className="max-w-md w-full bg-brand-white border border-brand-sand rounded-3xl p-8 shadow-xl text-center space-y-6">
+                  <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
+                    ⚠️
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="font-serif text-2xl font-bold text-brand-text">Akses Akun Ditangguhkan</h2>
+                    <p className="text-sm text-brand-text-soft leading-relaxed">
+                      {freshUser?.status === "banned" 
+                        ? "Akun Anda telah dinonaktifkan secara permanen karena melanggar pedoman komunitas kami." 
+                        : `Akun Anda sedang dibekukan sementara oleh sistem.${freshUser?.statusReason ? ` Alasan: ${freshUser.statusReason}` : " Mohon hubungi pihak administrator."}`}
+                    </p>
+                  </div>
+                  <div className="pt-4 border-t border-brand-sand/40">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-3 bg-brand-text text-brand-white text-xs font-bold uppercase tracking-wider rounded-xl hover:opacity-90 transition-all cursor-pointer"
+                    >
+                      Keluar dari Aplikasi
+                    </button>
+                  </div>
                 </div>
-              )}
+              </div>
+            );
+          }
 
-              {currentUser.role === "influencer" && (
-                <div className="flex-1">
-                  <InfluencerDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
-                </div>
-              )}
+          return (
+            <motion.div 
+              key="main" 
+              initial={{ opacity: 0, y: 5 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0 }}
+              className="flex-grow flex flex-col w-full animate-fadeIn"
+            >
+              {/* Nav Header Row */}
+              <Topbar currentUser={currentUser} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />
 
-              {currentUser.role === "admin" && (
-                <div className="flex-1">
-                  <AdminDashboard currentUser={currentUser} />
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
+              {/* Main Application Area (Dynamic Role dashboard) */}
+              <div className="flex-1 flex flex-col md:flex-row w-full">
+                {currentUser.role === "umkm" && (
+                  <div className="flex-1 w-full">
+                    <UmkmDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
+                  </div>
+                )}
+
+                {currentUser.role === "influencer" && (
+                  <div className="flex-1 w-full">
+                    <InfluencerDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
+                  </div>
+                )}
+
+                {currentUser.role === "admin" && (
+                  <div className="flex-1 w-full">
+                    <AdminDashboard currentUser={currentUser} />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          );
+        })()}
 
       </AnimatePresence>
 

@@ -24,6 +24,9 @@ export interface User {
   isApproved: boolean;
   engagement?: string;
   rating?: number;
+  status?: 'active' | 'suspended' | 'banned';
+  warningsCount?: number;
+  statusReason?: string;
 }
 
 export interface CampaignInfluencer {
@@ -85,3 +88,31 @@ export interface WithdrawalTx {
   status: 'pending' | 'completed' | 'rejected';
   date: string;
 }
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  reporterName: string;
+  reporterRole: UserRole;
+  reportedId: string;
+  reportedName: string;
+  reportedRole: UserRole;
+  reason: string;
+  description: string;
+  evidenceUrl?: string;
+  status: 'pending' | 'under_review' | 'resolved' | 'rejected';
+  notes?: string;
+  sanctionType?: 'none' | 'warning' | 'suspend' | 'ban';
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  campaignId: string;
+  senderId: string;
+  receiverId: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
