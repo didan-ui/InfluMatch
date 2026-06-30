@@ -74,11 +74,8 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   // Handle approving pending user accounts
   const handleApproveUser = async (userId: string, userName: string) => {
-    const allUsers = await getDbUsers();
-    const user = allUsers.find(u => u.id === userId);
-    if (user) {
-      user.isApproved = true;
-      await saveDbUser(user);
+    try {
+      await db.users.update(userId, { isApproved: true });
       await addDbLog(currentUser.name, "Persetujuan User", `Admin Utama menyetujui akun ${userName}`, "admin");
       await forceRefresh();
       setAlertInfo({
@@ -86,6 +83,13 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         title: "Persetujuan Berhasil",
         message: `Akun ${userName} berhasil disetujui untuk go-live di InfluMatch.`,
         type: "success"
+      });
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Persetujuan Gagal",
+        message: `Terjadi kesalahan saat menyetujui akun: ${err.message || err}`,
+        type: "error"
       });
     }
   };
@@ -133,34 +137,43 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   // Handle forcing release of escrow in dispute scenario
   const handleAdminForceRelease = async (txId: string) => {
-    const allEscrows = await getDbEscrow();
-    const tx = allEscrows.find(e => e.id === txId);
-    if (tx) {
-      tx.status = "released";
-      await saveDbEscrow(tx);
+    try {
+      await db.escrows.update(txId, { status: "released" });
 
       // set campaign status in db
-      const allCampaigns = await getDbCampaigns();
-      const camp = allCampaigns.find(c => c.id === tx.campaignId);
-      if (camp) {
-        const infCandidate = camp.influencers.find(i => i.influencerId === tx.influencerId);
-        if (infCandidate) {
-          infCandidate.status = "completed";
-          infCandidate.escrowReleased = true;
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.id === txId);
+      if (tx) {
+        const allCampaigns = await getDbCampaigns();
+        const camp = allCampaigns.find(c => c.id === tx.campaignId);
+        if (camp) {
+          const infCandidate = camp.influencers.find(i => i.influencerId === tx.influencerId);
+          if (infCandidate) {
+            infCandidate.status = "completed";
+            infCandidate.escrowReleased = true;
+          }
+          if (camp.influencers.every(i => i.status === "completed")) {
+            camp.status = "completed";
+          }
+          await saveDbCampaign(camp);
         }
-        if (camp.influencers.every(i => i.status === "completed")) {
-          camp.status = "completed";
-        }
-        await saveDbCampaign(camp);
+
+        await addDbLog(currentUser.name, "Bantuan Dana Selesai", `Admin Utama membantu mengirimkan dana pembayaran sebesar Rp${tx.amount.toLocaleString()} ke influencer ${tx.influencerName}`, "admin");
       }
 
-      await addDbLog(currentUser.name, "Bantuan Dana Selesai", `Admin Utama membantu mengirimkan dana pembayaran sebesar Rp${tx.amount.toLocaleString()} ke influencer ${tx.influencerName}`, "admin");
       await forceRefresh();
       setAlertInfo({
         isOpen: true,
         title: "Dana Dicairkan (Escrow)",
         message: "Penyelesaian Selesai! Pembayaran berhasil diteruskan langsung ke saldo dompet influencer.",
         type: "success"
+      });
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Melepaskan Dana",
+        message: `Terjadi kesalahan saat melepaskan dana: ${err.message || err}`,
+        type: "error"
       });
     }
   };
@@ -250,7 +263,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
       </aside>
 
       {/* ADMIN CONTENT BODY */}
-      <main className="flex-1 p-6 lg:p-10 max-w-7xl space-y-6">
+      <main className="flex-1 p-6 lg:p-10 max-w-7xl space-y-6 min-w-0">
         
         {/* Bento Grid Header Layout */}
         <div className="grid grid-cols-12 gap-5">

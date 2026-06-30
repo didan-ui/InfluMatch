@@ -135,7 +135,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans text-brand-text flex flex-col selection:bg-brand-blush/65 select-none md:select-text">
+    <div className="min-h-screen bg-brand-bg font-sans text-brand-text flex flex-col selection:bg-brand-blush/65 select-none md:select-text overflow-x-hidden">
 
       <AnimatePresence mode="wait">
 

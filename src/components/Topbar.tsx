@@ -8,7 +8,7 @@ interface TopbarProps {
 
 export default function Topbar({ currentUser, onLogout }: TopbarProps) {
   return (
-    <nav className="h-16 bg-brand-white border-b border-brand-sand px-6 xl:px-12 flex items-center justify-between sticky top-0 z-50 shadow-sm/20 font-sans">
+    <nav className="w-full min-w-full h-16 bg-brand-white border-b border-brand-sand px-6 xl:px-12 flex items-center justify-between sticky top-0 z-50 shadow-sm/20 font-sans">
       
       {/* Brand logo */}
       <div className="flex items-center gap-2.5">

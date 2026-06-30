@@ -19,6 +19,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Anda tinggal merefaktorkan pemanggilan di `src/utils.ts` atau komponen dashboard langsung ke fungsi-fungsi di bawah ini:
  */
 
+function mapDbUserToUser(item: any): User {
+  return {
+    id: item.id,
+    email: item.email,
+    password: item.password,
+    name: item.name,
+    role: item.role,
+    brandName: item.brand_name,
+    brandCategory: item.brand_category,
+    brandDescription: item.brand_description,
+    handle: item.handle,
+    followers: item.followers,
+    followersNum: item.followers_num != null ? Number(item.followers_num) : undefined,
+    pricePerPost: item.price_per_post,
+    niche: item.niche,
+    city: item.city,
+    avatarUrl: item.avatar_url,
+    isApproved: !!item.is_approved,
+    engagement: item.engagement,
+    rating: item.rating != null ? Number(item.rating) : undefined
+  };
+}
+
 export const supabaseDb = {
   users: {
     // Mendapatkan semua pengguna atau filter berdasarkan kriteria
@@ -29,7 +52,7 @@ export const supabaseDb = {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return (data || []) as unknown as User[];
+      return (data || []).map(mapDbUserToUser);
     },
 
     // Cari pengguna berdasarkan ID
@@ -41,7 +64,7 @@ export const supabaseDb = {
         .single();
       
       if (error) return null;
-      return data as unknown as User;
+      return mapDbUserToUser(data);
     },
 
     // Menyimpan pengguna baru (Register)
@@ -72,7 +95,7 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return data as unknown as User;
+      return mapDbUserToUser(data);
     },
 
     // Memperbarui profil pengguna
@@ -101,7 +124,7 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return data as unknown as User;
+      return mapDbUserToUser(data);
     },
 
     // Menghapus pengguna
