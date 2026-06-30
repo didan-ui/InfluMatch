@@ -26,9 +26,12 @@ function mapDbUserToUser(item: any): User {
     password: item.password,
     name: item.name,
     role: item.role,
-    brandName: item.brand_name,
-    brandCategory: item.brand_category,
-    brandDescription: item.brand_description,
+    brandName: item.role === "umkm" ? item.brand_name : undefined,
+    brandCategory: item.role === "umkm" ? item.brand_category : undefined,
+    brandDescription: item.role === "umkm" ? item.brand_description : undefined,
+    bankName: item.role === "influencer" ? item.brand_name : undefined,
+    accountNo: item.role === "influencer" ? item.brand_category : undefined,
+    accountHolder: item.role === "influencer" ? item.brand_description : undefined,
     handle: item.handle,
     followers: item.followers,
     followersNum: item.followers_num != null ? Number(item.followers_num) : undefined,
@@ -69,6 +72,7 @@ export const supabaseDb = {
 
     // Menyimpan pengguna baru (Register)
     save: async (user: User): Promise<User> => {
+      const isInfluencer = user.role === "influencer";
       const { data, error } = await supabase
         .from("users")
         .insert([{
@@ -77,9 +81,9 @@ export const supabaseDb = {
           password: user.password,
           name: user.name,
           role: user.role,
-          brand_name: user.brandName,
-          brand_category: user.brandCategory,
-          brand_description: user.brandDescription,
+          brand_name: isInfluencer ? user.bankName : user.brandName,
+          brand_category: isInfluencer ? user.accountNo : user.brandCategory,
+          brand_description: isInfluencer ? user.accountHolder : user.brandDescription,
           handle: user.handle,
           followers: user.followers,
           followers_num: user.followersNum,
@@ -102,9 +106,16 @@ export const supabaseDb = {
     update: async (id: string, updates: Partial<User>): Promise<User | null> => {
       const dbUpdates: any = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name;
+      
+      // Map brand fields or bank fields depending on updates
       if (updates.brandName !== undefined) dbUpdates.brand_name = updates.brandName;
       if (updates.brandCategory !== undefined) dbUpdates.brand_category = updates.brandCategory;
       if (updates.brandDescription !== undefined) dbUpdates.brand_description = updates.brandDescription;
+      
+      if (updates.bankName !== undefined) dbUpdates.brand_name = updates.bankName;
+      if (updates.accountNo !== undefined) dbUpdates.brand_category = updates.accountNo;
+      if (updates.accountHolder !== undefined) dbUpdates.brand_description = updates.accountHolder;
+
       if (updates.city !== undefined) dbUpdates.city = updates.city;
       if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
       if (updates.rating !== undefined) dbUpdates.rating = updates.rating;

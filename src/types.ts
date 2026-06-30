@@ -24,6 +24,9 @@ export interface User {
   isApproved: boolean;
   engagement?: string;
   rating?: number;
+  bankName?: string;
+  accountNo?: string;
+  accountHolder?: string;
 }
 
 export interface CampaignInfluencer {

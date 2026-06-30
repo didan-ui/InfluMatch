@@ -60,6 +60,9 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
   const [handle, setHandle] = useState(currentUser.handle || "@siska");
   const [city, setCity] = useState(currentUser.city || "Malang");
   const [niche, setNiche] = useState<string[]>(currentUser.niche || []);
+  const [bankName, setBankName] = useState(currentUser.bankName || "BCA");
+  const [accountNo, setAccountNo] = useState(currentUser.accountNo || "");
+  const [accountHolder, setAccountHolder] = useState(currentUser.accountHolder || currentUser.name);
   const [showSettingsSuccess, setShowSettingsSuccess] = useState(false);
 
   // Withdraw states
@@ -280,7 +283,10 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       followersNum: followersNum,
       handle: handle,
       city: city,
-      niche: niche
+      niche: niche,
+      bankName: bankName,
+      accountNo: accountNo,
+      accountHolder: accountHolder
     });
 
     if (updated) {
@@ -291,6 +297,13 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       setShowSettingsSuccess(true);
       setTimeout(() => setShowSettingsSuccess(false), 2000);
     }
+  };
+
+  const handleOpenWithdrawModal = () => {
+    setWithdrawBank(bankName);
+    setWithdrawAccountNo(accountNo);
+    setWithdrawAccountHolder(accountHolder || currentUser.name);
+    setIsWithdrawModalOpen(true);
   };
 
   const handleRequestWithdrawal = async (e: React.FormEvent) => {
@@ -1010,25 +1023,25 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
             {/* Balances indicators */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between text-left">
                 <div>
                   <p className="text-[10px] font-bold text-brand-text-light tracking-widest uppercase">SALDO SIAP DICAIRKAN (DANA BERHASIL)</p>
                   <h4 className="font-serif text-4xl font-black text-brand-sage-dark mt-2.5">Rp{earnedReleased.toLocaleString()}</h4>
-                  <p className="text-xs text-brand-text-soft mt-1 leading-normal">Telah disetujui penuh oleh masing-masing pemilik brand partner Anda.</p>
+                  <p className="text-xs text-brand-text-soft mt-1 leading-normal">Telah disetujui penuh oleh Admin Utama dan telah ditransfer ke rekening bank terdaftar Anda.</p>
                 </div>
                 <button
                   disabled={earnedReleased === 0}
-                  onClick={() => setIsWithdrawModalOpen(true)}
+                  onClick={handleOpenWithdrawModal}
                   className="w-full mt-6 py-3 rounded-xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 select-none cursor-pointer"
                 >
                   Ajukan Penarikan Dana Ke Rekening Bank
                 </button>
               </div>
 
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm">
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm text-left">
                 <p className="text-[10px] font-bold text-brand-text-light tracking-widest uppercase">DANA SEDANG TERIKAT (ESCROW DRAFT)</p>
                 <h4 className="font-serif text-4xl font-black text-brand-text-soft mt-2.5">Rp{earnedLocked.toLocaleString()}</h4>
-                <p className="text-xs text-brand-text-soft mt-2 leading-relaxed">Dana terikat dalam penampungan aman. Akan otomatis cair setelah konten Anda diserahkan dan disetujui partner UMKM.</p>
+                <p className="text-xs text-brand-text-soft mt-2 leading-relaxed">Dana aman berada di Rekening Bersama Admin Utama. Dana akan segera ditransfer langsung oleh Admin setelah bukti pengerjaan konten Anda dinyatakan aman dan disetujui oleh tim verifikator.</p>
               </div>
 
               <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between">
@@ -1346,11 +1359,60 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                     </div>
                   </div>
 
+                  {/* PENGATURAN REKENING TRANSFER BANK */}
+                  <div className="pt-4 border-t border-brand-sand/60 space-y-4">
+                    <h4 className="text-xs font-serif font-bold text-brand-text normal-case tracking-normal flex items-center gap-1.5 mb-1">
+                      <Wallet className="w-4 h-4 text-brand-sage-dark" /> Rekening Bank Menerima Pembayaran
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nama Bank</label>
+                        <select
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs cursor-pointer"
+                        >
+                          <option value="BCA">BCA</option>
+                          <option value="Mandiri">Mandiri</option>
+                          <option value="BNI">BNI</option>
+                          <option value="BRI">BRI</option>
+                          <option value="BSI">BSI</option>
+                          <option value="Gopay">Gopay / ShopeePay</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nomor Rekening</label>
+                        <input
+                          type="text"
+                          value={accountNo}
+                          onChange={(e) => setAccountNo(e.target.value)}
+                          placeholder="Contoh: 123456789"
+                          className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nama Pemilik Rekening</label>
+                      <input
+                        type="text"
+                        value={accountHolder}
+                        onChange={(e) => setAccountHolder(e.target.value)}
+                        placeholder="Nama sesuai buku tabungan"
+                        className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     className="w-full py-3.5 rounded-2xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-md cursor-pointer"
                   >
-                    Simpan Perubahan Metrik
+                    Simpan Perubahan Metrik & Rekening
                   </button>
 
                 </form>

@@ -135,6 +135,125 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     });
   };
 
+  // Verify and transfer funds from Admin to Influencer
+  const handleAdminVerifyAndTransfer = async (campaignId: string, influencerId: string) => {
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (!camp) return;
+
+      const inf = camp.influencers.find(i => i.influencerId === influencerId);
+      if (!inf) return;
+
+      // Update campaign influencer status
+      inf.status = "completed";
+      inf.escrowReleased = true;
+
+      if (camp.influencers.every(i => i.status === "completed")) {
+        camp.status = "completed";
+      }
+      await saveDbCampaign(camp);
+
+      // Update escrow tx status
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.campaignId === campaignId && e.influencerId === influencerId);
+      if (tx) {
+        tx.status = "released";
+        await saveDbEscrow(tx);
+        await addDbLog("Admin", "Verifikasi & Transfer", `Admin menyetujui proses campaign "${camp.name}" dan mentransfer Rp${tx.amount.toLocaleString()} ke influencer ${tx.influencerName}`, "admin");
+      }
+
+      await forceRefresh();
+      setAlertInfo({
+        isOpen: true,
+        title: "Pekerjaan Diverifikasi & Ditransfer",
+        message: `Kampanye telah diverifikasi aman. Admin telah menyelesaikan transfer pembayaran ke rekening ${inf.influencerName}.`,
+        type: "success"
+      });
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Proses Verifikasi",
+        message: `Terjadi kesalahan: ${err.message || err}`,
+        type: "error"
+      });
+    }
+  };
+
+  // Hold funds if there is an anomaly (menahan dana)
+  const handleAdminHoldFunds = async (campaignId: string, influencerId: string) => {
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (!camp) return;
+
+      const inf = camp.influencers.find(i => i.influencerId === influencerId);
+      if (!inf) return;
+
+      // Update campaign influencer status to disputed
+      inf.status = "disputed";
+      await saveDbCampaign(camp);
+
+      // Add audit log
+      await addDbLog("Admin", "Tahan Dana Escrow", `Admin menahan dana pembayaran campaign "${camp.name}" untuk influencer ${inf.influencerName} karena ada indikasi kejanggalan`, "admin");
+
+      await forceRefresh();
+      setAlertInfo({
+        isOpen: true,
+        title: "Dana Berhasil Ditahan",
+        message: `Dana untuk influencer ${inf.influencerName} berhasil ditahan oleh Admin untuk pemeriksaan lebih mendalam karena terindikasi janggal.`,
+        type: "warning"
+      });
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Menahan Dana",
+        message: `Terjadi kesalahan: ${err.message || err}`,
+        type: "error"
+      });
+    }
+  };
+
+  // Refund locked/held funds to UMKM
+  const handleAdminRefundToUmkm = async (campaignId: string, influencerId: string) => {
+    try {
+      const allCampaigns = await getDbCampaigns();
+      const camp = allCampaigns.find(c => c.id === campaignId);
+      if (!camp) return;
+
+      const inf = camp.influencers.find(i => i.influencerId === influencerId);
+      if (!inf) return;
+
+      // Reset influencer status back to brief_ready
+      inf.status = "brief_ready";
+      await saveDbCampaign(camp);
+
+      // Set escrow status to pending
+      const allEscrows = await getDbEscrow();
+      const tx = allEscrows.find(e => e.campaignId === campaignId && e.influencerId === influencerId);
+      if (tx) {
+        tx.status = "pending"; // Reset escrow to pending so SME can retry or handle as needed
+        await saveDbEscrow(tx);
+        await addDbLog("Admin", "Refund Dana", `Admin mengembalikan dana iklan Rp${tx.amount.toLocaleString()} dari campaign "${camp.name}" kepada UMKM pemilik usaha`, "admin");
+      }
+
+      await forceRefresh();
+      setAlertInfo({
+        isOpen: true,
+        title: "Dana Berhasil Direfund",
+        message: `Dana pembayaran berhasil dikembalikan ke saldo/akun UMKM ${camp.umkmName}. Status kreatif diatur ulang ke persiapan brief.`,
+        type: "info"
+      });
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Melakukan Refund",
+        message: `Terjadi kesalahan: ${err.message || err}`,
+        type: "error"
+      });
+    }
+  };
+
   // Handle forcing release of escrow in dispute scenario
   const handleAdminForceRelease = async (txId: string) => {
     try {
@@ -612,6 +731,196 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         {activeSubTab === "escrows" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             
+            {/* NEW: Verification & Campaign Process Control Panel */}
+            <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm space-y-4 overflow-hidden">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-700 shrink-0">
+                  <ShieldCheck className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-brand-text">Pusat Verifikasi Kampanye & Transfer Pembayaran</h3>
+                  <p className="text-xs text-brand-text-soft">Periksa bukti kerja kreator. Jika ada kejanggalan, Anda berhak <span className="font-bold text-red-600">Menahan Dana</span>. Jika sudah aman, selesaikan <span className="font-bold text-brand-sage-dark">Transfer ke Influencer</span>.</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto pt-2">
+                <table className="w-full text-left text-xs text-brand-text select-text animate-fade-in">
+                  <thead className="bg-brand-bg text-brand-text-soft uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="py-3 px-4 border-b border-brand-sand">KAMPANYE & UMKM</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">INFLUENCER</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">REKENING INFLUENCER</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">PROGRES & BUKTI KERJA</th>
+                      <th className="py-3 px-4 border-b border-brand-sand">STATUS DANA</th>
+                      <th className="py-3 px-4 border-b border-brand-sand text-right">AKSI VERIFIKASI</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-sand/50">
+                    {(() => {
+                      // Flatten campaign influencers who have escrow locked, content uploaded, or disputed status
+                      const activeVerifications: Array<{
+                        campaignId: string;
+                        campaignName: string;
+                        umkmName: string;
+                        influencerId: string;
+                        influencerName: string;
+                        status: string;
+                        submissionUrl?: string;
+                        budget: number;
+                      }> = [];
+
+                      campaigns.forEach(c => {
+                        c.influencers.forEach(inf => {
+                          if (["escrow_locked", "content_uploaded", "disputed"].includes(inf.status)) {
+                            activeVerifications.push({
+                              campaignId: c.id,
+                              campaignName: c.name,
+                              umkmName: c.umkmName,
+                              influencerId: inf.influencerId,
+                              influencerName: inf.influencerName,
+                              status: inf.status,
+                              submissionUrl: inf.submissionUrl,
+                              budget: c.budget
+                            });
+                          }
+                        });
+                      });
+
+                      if (activeVerifications.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="py-10 text-center text-brand-text-soft">
+                              Tidak ada proses kampanye yang memerlukan verifikasi atau penahanan dana saat ini.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return activeVerifications.map((item, idx) => {
+                        const infUser = users.find(u => u.id === item.influencerId);
+                        const bankName = infUser?.bankName || "BCA";
+                        const accountNo = infUser?.accountNo || "—";
+                        const accountHolder = infUser?.accountHolder || infUser?.name || "—";
+
+                        return (
+                          <tr key={idx} className="hover:bg-brand-bg/10">
+                            <td className="py-3.5 px-4">
+                              <span className="font-serif font-bold text-brand-text block text-sm">{item.campaignName}</span>
+                              <span className="text-[10px] text-brand-text-soft mt-0.5 block">UMKM: <span className="font-bold">{item.umkmName}</span></span>
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-brand-text">{item.influencerName}</td>
+                            <td className="py-3.5 px-4">
+                              {infUser?.accountNo ? (
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <span className="px-1.5 py-0.5 bg-brand-sage/20 text-brand-sage-dark font-black rounded text-[10px] uppercase">{bankName}</span>
+                                    <span className="font-mono font-bold text-brand-text">{accountNo}</span>
+                                  </div>
+                                  <span className="text-[10px] text-brand-text-soft block italic">a.n. {accountHolder}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(accountNo);
+                                      alert("Nomor rekening berhasil disalin!");
+                                    }}
+                                    className="text-[9px] text-brand-sky-dark font-bold hover:underline cursor-pointer"
+                                  >
+                                    Salin Rekening
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-brand-text-light italic text-[11px]">Belum diatur oleh kreator</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="space-y-1">
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-sans font-black uppercase tracking-wider border block w-fit ${
+                                  item.status === "content_uploaded" ? "bg-brand-sky text-brand-sky-dark border-brand-sky-dark/20 animate-pulse" :
+                                  item.status === "disputed" ? "bg-red-100 text-red-700 border-red-200" :
+                                  "bg-amber-100 text-amber-800 border-amber-200"
+                                }`}>
+                                  {item.status === "content_uploaded" ? "KONTEN SELESAI (Tinjau!)" :
+                                   item.status === "disputed" ? "DITAHAN (JANGGAL / SENGKETA)" :
+                                   "SEDANG DIPRODUKSI"}
+                                </span>
+                                {item.submissionUrl && (
+                                  <a
+                                    href={item.submissionUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-brand-blush-dark underline font-bold inline-flex items-center gap-0.5 mt-1"
+                                  >
+                                    Tautan Hasil Konten <ExternalLink className="w-2.5 h-2.5 inline" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold text-brand-sage-dark text-sm">
+                              Rp{item.budget.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex flex-col sm:flex-row gap-1.5 justify-end">
+                                {item.status === "content_uploaded" && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Konfirmasi bahwa Anda (Admin) sudah mentransfer sebesar Rp${item.budget.toLocaleString()} ke rekening ${bankName} - ${accountNo} (${accountHolder}) milik ${item.influencerName}?`)) {
+                                          handleAdminVerifyAndTransfer(item.campaignId, item.influencerId);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 bg-brand-text text-brand-white font-bold rounded-lg hover:opacity-90 text-[10px] cursor-pointer shadow-xs whitespace-nowrap"
+                                    >
+                                      Selesai Transfer ke Influencer
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Apakah Anda yakin ingin MENAHAN DANA pembayaran ini karena ada yang janggal/mencurigakan pada proses campaign atau hasil konten?`)) {
+                                          handleAdminHoldFunds(item.campaignId, item.influencerId);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold rounded-lg text-[10px] border border-red-200 cursor-pointer whitespace-nowrap"
+                                    >
+                                      Tahan Dana (Freeze)
+                                    </button>
+                                  </>
+                                )}
+                                {item.status === "disputed" && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Lepaskan dana penahanan ini dan transfer sebesar Rp${item.budget.toLocaleString()} ke rekening ${bankName} - ${accountNo} (${accountHolder}) milik ${item.influencerName}?`)) {
+                                          handleAdminVerifyAndTransfer(item.campaignId, item.influencerId);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 bg-brand-text text-brand-white font-bold rounded-lg hover:opacity-90 text-[10px] cursor-pointer"
+                                    >
+                                      Selesaikan Sengketa & Transfer
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Kembalikan dana sebesar Rp${item.budget.toLocaleString()} kepada UMKM pemilik usaha dan reset status progres kreatif?`)) {
+                                          handleAdminRefundToUmkm(item.campaignId, item.influencerId);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 font-bold rounded-lg border border-amber-200 text-[10px] cursor-pointer"
+                                    >
+                                      Refund ke UMKM
+                                    </button>
+                                  </>
+                                )}
+                                {item.status === "escrow_locked" && (
+                                  <span className="text-[10px] text-brand-text-soft italic">Kreator memproduksi konten</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* Audit Escrow Funds actions */}
             <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm space-y-4 overflow-hidden">
               <h3 className="font-serif text-xl font-bold text-brand-text">Audit Penampungan Transaksi Escrow</h3>

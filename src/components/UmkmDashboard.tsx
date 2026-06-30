@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Plus, Search, SlidersHorizontal, Sparkles, Send, 
   CheckCircle, FileText, Wallet, BarChart3, Settings, 
-  ArrowRight, ExternalLink, RefreshCw, Star, Info, AlertTriangle, Users, MapPin
+  ArrowRight, ExternalLink, RefreshCw, Star, Info, AlertTriangle, Users, MapPin, X, ShieldCheck
 } from "lucide-react";
 import CustomAlert from "./CustomAlert";
 
@@ -104,6 +104,12 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
   const [profileCity, setProfileCity] = useState(currentUser.city || "Malang");
   const [profileDesc, setProfileDesc] = useState(currentUser.brandDescription || "");
   const [showProfileSuccess, setShowProfileSuccess] = useState(false);
+
+  // Bank Transfer Payment Modal states
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferTargetInfluencer, setTransferTargetInfluencer] = useState<User | null>(null);
+  const [transferCampaignId, setTransferCampaignId] = useState("");
+  const [transferAmount, setTransferAmount] = useState(0);
 
   // Sync details from Supabase
   const forceRefresh = async () => {
@@ -505,34 +511,32 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
       inf.status = "escrow_locked";
       await saveDbCampaign(camp);
 
-      await addDbLog(currentUser.name, "Escrow Terkunci", `Mengirim dana iklan Rp${tx.amount.toLocaleString()} ke penampungan Escrow (Alur Cepat)`, "umkm");
+      await addDbLog(currentUser.name, "Escrow Terkunci", `Mengirim dana iklan Rp${tx.amount.toLocaleString()} ke Rekening Bersama Admin`, "umkm");
       await forceRefresh();
       setAlertInfo({
         isOpen: true,
-        title: "Dana Escrow Terkunci",
-        message: "Dana telah berhasil diamankan di rekening Escrow InfluMatch! Influencer telah diberitahu untuk segera mengunggah/membuat konten.",
+        title: "Dana Aman di Admin",
+        message: "Dana telah berhasil dikirimkan ke Rekening Bersama Admin! Admin telah mengamankan transaksi ini, dan Kreator akan segera memproduksi konten.",
         type: "success"
       });
-    } else if (inf.status === "content_uploaded") {
-      tx.status = "released";
-      await saveDbEscrow(tx);
+    }
+  };
 
-      inf.status = "completed";
-      inf.escrowReleased = true;
-
-      if (camp.influencers.every(i => i.status === "completed")) {
-        camp.status = "completed";
-      }
-      await saveDbCampaign(camp);
-
-      await addDbLog(currentUser.name, "Persetujuan Escrow", `Melepaskan dana escrow Rp${tx.amount.toLocaleString()} ke ${tx.influencerName} (Alur Cepat)`, "umkm");
-      await forceRefresh();
-      setAlertInfo({
-        isOpen: true,
-        title: "Pembayaran Berhasil",
-        message: "Pembayaran berhasil dicairkan! Terimakasih telah bekerja sama dengan pihak kreator.",
-        type: "success"
-      });
+  // Initiate bank transfer payment modal
+  const initiateTransferPayment = async (campaignId: string, influencerId: string) => {
+    const allUsers = await getDbUsers();
+    const influencer = allUsers.find(u => u.id === influencerId);
+    
+    const allCampaigns = await getDbCampaigns();
+    const camp = allCampaigns.find(c => c.id === campaignId);
+    
+    if (influencer && camp) {
+      setTransferTargetInfluencer(influencer);
+      setTransferCampaignId(campaignId);
+      setTransferAmount(camp.budget);
+      setShowTransferModal(true);
+    } else {
+      await handleDirectEscrowProcess(campaignId, influencerId);
     }
   };
 
@@ -1067,14 +1071,16 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                               col.status === "escrow_locked" ? "bg-indigo-100 text-indigo-800 border-indigo-200" :
                               col.status === "in_progress" ? "bg-purple-100 text-purple-800 border-purple-200" :
                               col.status === "content_uploaded" ? "bg-brand-sky text-brand-sky-dark border-brand-sky-dark/20" :
+                              col.status === "disputed" ? "bg-red-100 text-red-700 border-red-200" :
                               "bg-brand-sage text-brand-sage-dark border-brand-sage-dark/25";
 
                             const milestoneLabel =
-                              col.status === "brief_ready" ? "Menunggu Escrow Terkunci (SME)" :
-                              col.status === "escrow_locked" ? "Dana Escrow Terkunci" :
+                              col.status === "brief_ready" ? "Belum Bayar (Butuh Transfer ke Admin)" :
+                              col.status === "escrow_locked" ? "Dana Aman di Rekening Admin" :
                               col.status === "in_progress" ? "Kreator Sedang Produksi" :
-                              col.status === "content_uploaded" ? "Konten Selesai - Butuh Approval Pencairan" :
-                              "Selesai & Dana Cair";
+                              col.status === "content_uploaded" ? "Konten Selesai - Menunggu Review Admin" :
+                              col.status === "disputed" ? "DITAHAN ADMIN (ADA KEJANGGALAN)" :
+                              "Lunas & Cair (Ditransfer Admin)";
 
                             return (
                               <div key={col.influencerId} className="p-4 border border-brand-sand/40 bg-brand-bg/10 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1087,26 +1093,31 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                                   </div>
                                   
                                   {col.status === "content_uploaded" && col.submissionUrl && (
-                                    <div className="mt-2 text-[11px] text-brand-text-soft leading-normal">
+                                    <div className="mt-2 text-[11px] text-brand-text-soft leading-normal text-left">
                                       🔗 Bukti Live Konten: <a href={col.submissionUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-blush-dark underline select-all">{col.submissionUrl}</a>
-                                      <p className="text-[10px] text-brand-text-light font-medium mt-0.5">Silakan tinjau link konten di atas, lalu rilis dana di tab "Pembayaran Aman (Escrow)" untuk mencairkan pembayaran.</p>
+                                      <p className="text-[10px] text-brand-text-light font-medium mt-0.5">Silakan tinjau link konten di atas. Admin Utama akan memverifikasi kesesuaian konten sebelum mencairkan dana jaminan langsung ke rekening bank Kreator.</p>
+                                    </div>
+                                  )}
+                                  {col.status === "disputed" && (
+                                    <div className="mt-2 text-[11px] text-red-800 leading-normal text-left bg-red-50 p-2.5 rounded-xl border border-red-200 font-medium">
+                                      ⚠️ Admin mendeteksi adanya kejanggalan dalam pengerjaan campaign atau link konten yang diunggah. Dana aman ditahan oleh sistem Rekening Bersama Admin selama pemeriksaan arbitrase berlangsung.
                                     </div>
                                   )}
                                 </div>
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 shrink-0">
                                   <button
                                     onClick={() => handleViewInfluencerProfile(col.influencerId)}
                                     className="px-3.5 py-1.5 rounded-xl border border-brand-sand hover:bg-brand-bg text-brand-text font-bold text-[11px] cursor-pointer"
                                   >
                                     Lihat Profil
                                   </button>
-                                  {(col.status === "brief_ready" || col.status === "content_uploaded") && (
+                                  {col.status === "brief_ready" && (
                                     <button
-                                      onClick={() => handleDirectEscrowProcess(camp.id, col.influencerId)}
+                                      onClick={() => initiateTransferPayment(camp.id, col.influencerId)}
                                       className="px-3.5 py-1.5 rounded-xl bg-brand-text text-brand-white font-bold text-[11px] cursor-pointer shadow-xs hover:opacity-95"
                                     >
-                                      Proses
+                                      Transfer ke Admin
                                     </button>
                                   )}
                                 </div>
@@ -1494,7 +1505,7 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                       <div className="flex gap-2 self-end sm:self-center">
                         {tx.status === "pending" && (
                           <button
-                            onClick={() => handleDirectEscrowProcess(tx.campaignId, tx.influencerId)}
+                            onClick={() => initiateTransferPayment(tx.campaignId, tx.influencerId)}
                             className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-xl hover:opacity-90 transition-all text-[11px] cursor-pointer whitespace-nowrap"
                           >
                             Proses
@@ -1520,7 +1531,7 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                           if (member?.status === "content_uploaded") {
                             return (
                               <button
-                                onClick={() => handleDirectEscrowProcess(tx.campaignId, tx.influencerId)}
+                                onClick={() => initiateTransferPayment(tx.campaignId, tx.influencerId)}
                                 className="px-3 py-1.5 bg-brand-text text-brand-white font-bold rounded-xl hover:opacity-95 transition-all text-[11px] cursor-pointer"
                               >
                                 Proses
@@ -2338,6 +2349,108 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                 </form>
               </motion.div>
             </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BANK TRANSFER PAYMENT MODAL */}
+      <AnimatePresence>
+        {showTransferModal && transferTargetInfluencer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-text/45 backdrop-blur-xs">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-brand-white border border-brand-sand rounded-[2rem] max-w-lg w-full p-6 shadow-xl relative font-sans"
+            >
+              <button 
+                onClick={() => setShowTransferModal(false)}
+                className="absolute top-5 right-5 text-brand-text-light hover:text-brand-text cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-brand-sage flex items-center justify-center text-brand-sage-dark shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-brand-text">Informasi Transfer Bank Admin (Rekening Bersama)</h3>
+                  <p className="text-[11px] text-brand-text-soft mt-0.5 font-bold uppercase tracking-wider">Metode pembayaran aman melalui pengawasan sistem Admin</p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-brand-bg/50 border border-brand-sand rounded-2xl text-left">
+                  <p className="text-[10px] font-bold text-brand-text-light tracking-widest uppercase">Nominal Transfer Pembayaran</p>
+                  <p className="font-serif text-2xl font-black text-brand-text mt-1">Rp{transferAmount.toLocaleString()}</p>
+                  <p className="text-[11px] text-brand-text-soft mt-1">Pembayaran untuk campaign: <span className="font-bold text-brand-text">{campaigns.find(c => c.id === transferCampaignId)?.name || "Promosi Kreatif"}</span></p>
+                </div>
+
+                <div className="p-4 border border-brand-sand bg-brand-white rounded-2xl space-y-3.5 text-left">
+                  <div className="flex justify-between items-center border-b border-brand-sand/40 pb-2">
+                    <span className="text-xs font-bold text-brand-text-soft">Penerima Dana</span>
+                    <span className="text-xs font-black text-brand-text uppercase bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-[10px]">ADMIN INFLUMATCH</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1">
+                    <span className="text-xs font-bold text-brand-text-soft col-span-1">Nama Bank</span>
+                    <span className="text-xs font-bold text-brand-text col-span-2 text-right">Bank Mandiri</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1 items-center">
+                    <span className="text-xs font-bold text-brand-text-soft col-span-1">Nomor Rekening</span>
+                    <div className="col-span-2 flex items-center justify-end gap-1.5">
+                      <span className="text-xs font-mono font-bold text-brand-text">144-00-9876543-21</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText("14400987654321");
+                          alert("Nomor rekening Admin berhasil disalin ke clipboard!");
+                        }}
+                        className="px-1.5 py-0.5 bg-brand-bg border border-brand-sand rounded-md hover:bg-brand-sand/50 text-[10px] font-sans font-bold cursor-pointer text-brand-text-soft"
+                      >
+                        Salin
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1">
+                    <span className="text-xs font-bold text-brand-text-soft col-span-1">Nama Pemilik</span>
+                    <span className="text-xs font-bold text-brand-text col-span-2 text-right">PT InfluMatch Media (Admin)</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] rounded-2xl leading-normal text-left font-medium">
+                  <p className="font-bold flex items-center gap-1">💡 Alur Pengawasan Rekening Bersama (Admin):</p>
+                  <p className="mt-1 text-amber-800 leading-relaxed space-y-1">
+                    <span>1. Anda melakukan transfer sebesar <span className="font-bold">Rp{transferAmount.toLocaleString()}</span> ke Rekening Mandiri Admin di atas.</span><br />
+                    <span>2. Admin mengamankan dana dan menyalakan status <span className="font-bold text-indigo-700">Dana Escrow Terkunci</span>.</span><br />
+                    <span>3. Kreator memproduksi dan mengunggah konten hasil kerjasamanya.</span><br />
+                    <span>4. Admin memverifikasi kualitas konten. Setelah dinyatakan aman dan tidak ada kejanggalan, Admin akan mentransfer dana langsung ke rekening kreator <span className="font-bold">({transferTargetInfluencer.name})</span>.</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowTransferModal(false)}
+                  className="w-1/2 py-3 rounded-xl border border-brand-sand font-bold text-xs hover:bg-brand-bg active:scale-95 transition-all text-center text-brand-text-soft cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowTransferModal(false);
+                    await handleDirectEscrowProcess(transferCampaignId, transferTargetInfluencer.id);
+                  }}
+                  className="w-1/2 py-3 rounded-xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all text-center cursor-pointer shadow-md"
+                >
+                  Saya Sudah Transfer
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
