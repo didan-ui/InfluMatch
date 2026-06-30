@@ -15,16 +15,18 @@ import { motion } from "motion/react";
 import { 
   ShieldCheck, Users, Wallet, FileText, Check, X, 
   AlertTriangle, Hammer, RefreshCw, Trash2, Database, Award, ClipboardList, Search,
-  MapPin, ExternalLink 
+  MapPin, ExternalLink, Settings 
 } from "lucide-react";
 import CustomAlert from "./CustomAlert";
+import AvatarUpload from "./AvatarUpload";
 
 interface AdminDashboardProps {
   currentUser: User;
+  onUserUpdate?: (user: User) => void;
 }
 
-export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"users" | "campaigns" | "escrows" | "logs">("users");
+export default function AdminDashboard({ currentUser, onUserUpdate }: AdminDashboardProps) {
+  const [activeSubTab, setActiveSubTab] = useState<"users" | "campaigns" | "escrows" | "logs" | "profile">("users");
 
   // Custom Alert state
   const [alertInfo, setAlertInfo] = useState<{
@@ -51,6 +53,10 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [campFilterStatus, setCampFilterStatus] = useState("all");
   const [campFilterCategory, setCampFilterCategory] = useState("");
 
+  // Profile states
+  const [profileName, setProfileName] = useState(currentUser.name);
+  const [showProfileSuccess, setShowProfileSuccess] = useState(false);
+
   const forceRefresh = async () => {
     const [u, c, e, l, w] = await Promise.all([
       getDbUsers(),
@@ -70,7 +76,57 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   useEffect(() => {
     forceRefresh();
+    setProfileName(currentUser.name);
   }, [currentUser]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const updated = await db.users.update(currentUser.id, {
+        name: profileName
+      });
+      if (updated) {
+        await addDbLog(currentUser.name, "Update Profil", "Mengubah nama Admin", "admin");
+        if (onUserUpdate) {
+          onUserUpdate(updated);
+        }
+        setShowProfileSuccess(true);
+        setTimeout(() => setShowProfileSuccess(false), 2500);
+      }
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Memperbarui Profil",
+        message: err.message || "Terjadi kesalahan saat menyimpan perubahan.",
+        type: "error"
+      });
+    }
+  };
+
+  const handleAvatarUploadSuccess = async (avatarUrl: string) => {
+    try {
+      const updated = await db.users.update(currentUser.id, {
+        avatarUrl: avatarUrl
+      });
+      if (updated && onUserUpdate) {
+        onUserUpdate(updated);
+        await addDbLog(currentUser.name, "Update Foto Profil", "Mengunggah foto profil baru Admin", "admin");
+        setAlertInfo({
+          isOpen: true,
+          title: "Foto Profil Diperbarui",
+          message: "Foto profil Anda berhasil diunggah dan disimpan ke server.",
+          type: "success"
+        });
+      }
+    } catch (err: any) {
+      setAlertInfo({
+        isOpen: true,
+        title: "Gagal Memperbarui Foto",
+        message: err.message || "Terjadi kesalahan saat menyimpan foto profil.",
+        type: "error"
+      });
+    }
+  };
 
   // Handle approving pending user accounts
   const handleApproveUser = async (userId: string, userName: string) => {
@@ -349,7 +405,8 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
             { id: "users", label: "Kelola Pendaftar", icon: Users, badge: pendingApprovals.length },
             { id: "campaigns", label: "Pantau Kampanye", icon: FileText },
             { id: "escrows", label: "Verifikasi Pembayaran", icon: Wallet },
-            { id: "logs", label: "Catatan Aktivitas", icon: ClipboardList }
+            { id: "logs", label: "Catatan Aktivitas", icon: ClipboardList },
+            { id: "profile", label: "Profil Admin", icon: Settings }
           ].map(subTab => {
             const Icon = subTab.icon;
             const isSubActive = activeSubTab === subTab.id;
@@ -1088,6 +1145,96 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                   </div>
                 )}
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeSubTab === "profile" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 text-left">
+            <div>
+              <h2 className="font-serif text-3xl font-bold tracking-tight text-brand-text">Kelola Profil Admin</h2>
+              <p className="mt-1 text-sm text-brand-text-soft">
+                Atur foto profil dan informasi akun pengelola sistem utama di InfluMatch.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Profile card and form */}
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm">
+                
+                {showProfileSuccess && (
+                  <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-3.5 text-xs flex items-center gap-2">
+                    <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>Profil admin berhasil diperbarui!</span>
+                  </div>
+                )}
+
+                {/* Avatar Upload component */}
+                <div className="mb-6 pb-6 border-b border-brand-sand/50">
+                  <AvatarUpload
+                    currentAvatarUrl={currentUser.avatarUrl}
+                    userName={currentUser.name}
+                    userId={currentUser.id}
+                    onUploadSuccess={handleAvatarUploadSuccess}
+                  />
+                </div>
+
+                <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs font-bold uppercase tracking-wider text-brand-text-soft">
+                  
+                  <div>
+                    <label className="block mb-1.5 font-bold text-brand-text-soft">Nama Lengkap Admin</label>
+                    <input
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1.5 font-bold text-brand-text-soft">Email Sistem</label>
+                    <input
+                      type="email"
+                      value={currentUser.email}
+                      disabled
+                      className="w-full border border-brand-sand bg-brand-bg/10 rounded-2xl px-4 py-2.5 font-medium text-brand-text-light focus:outline-none text-xs cursor-not-allowed"
+                    />
+                    <p className="text-[10px] text-brand-text-light font-normal mt-1 lowercase">Email admin terikat pada sistem utama dan tidak dapat diubah.</p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 rounded-2xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-md cursor-pointer"
+                  >
+                    Simpan Perubahan Profil
+                  </button>
+
+                </form>
+              </div>
+
+              {/* Security info card */}
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-brand-text mb-4">Informasi Keamanan & Hak Akses</h3>
+                  <div className="space-y-4 text-xs text-brand-text-soft leading-relaxed">
+                    <p>
+                      Sebagai <strong>Pengelola Sistem Utama</strong> (Super Admin), Anda memiliki akses penuh ke seluruh data sensitif di platform InfluMatch, termasuk:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1.5 pl-2">
+                      <li>Menyetujui pendaftaran UMKM dan Kreator baru.</li>
+                      <li>Memantau pergerakan dana jaminan (escrow).</li>
+                      <li>Memproses pencairan penarikan dana ke rekening bank kreatif.</li>
+                      <li>Melihat riwayat audit log aktivitas sistem secara real-time.</li>
+                    </ul>
+                    <p className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl font-medium">
+                      ⚠️ Selalu pastikan foto profil Anda rapi dan profesional karena akan tampil di halaman persetujuan/verifikasi bagi UMKM & Kreator.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </motion.div>
         )}

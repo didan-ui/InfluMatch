@@ -235,7 +235,7 @@ export default function App() {
 
               {currentUser.role === "admin" && (
                 <div className="flex-1">
-                  <AdminDashboard currentUser={currentUser} />
+                  <AdminDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
                 </div>
               )}
             </div>
