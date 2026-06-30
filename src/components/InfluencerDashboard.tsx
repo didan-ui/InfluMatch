@@ -315,20 +315,53 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       return;
     }
 
-    const newW: WithdrawalTx = {
-      id: "w-" + Date.now(),
-      influencerId: currentUser.id,
-      influencerName: currentUser.name,
-      amount: earnedReleased,
-      bankName: withdrawBank,
-      accountNo: withdrawAccountNo,
-      accountHolder: withdrawAccountHolder,
-      status: "pending",
-      date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })
-    };
+    // Identify which released escrows are being withdrawn
+    const releasedEscrows = escrows.filter(ev => ev.status === "released");
+    const unwithdrawnEscrows = releasedEscrows.filter(ev => {
+      return !withdrawals.some(w => w.campaignId === ev.campaignId && w.status !== "rejected");
+    });
 
-    await db.withdrawals.save(newW);
-    await addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${earnedReleased.toLocaleString()} ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
+    if (unwithdrawnEscrows.length > 0) {
+      // Create a separate withdrawal transaction for each campaign's escrow earnings
+      for (let i = 0; i < unwithdrawnEscrows.length; i++) {
+        const esc = unwithdrawnEscrows[i];
+        const camp = campaigns.find(c => c.id === esc.campaignId);
+        const umkmId = camp ? camp.umkmId : "";
+        const campaignName = camp ? camp.name : esc.campaignName;
+
+        const newW: WithdrawalTx = {
+          id: `w-${Date.now()}-${i}`,
+          influencerId: currentUser.id,
+          influencerName: currentUser.name,
+          amount: esc.amount,
+          bankName: withdrawBank,
+          accountNo: withdrawAccountNo,
+          accountHolder: withdrawAccountHolder,
+          status: "pending",
+          date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }),
+          umkmId: umkmId,
+          campaignId: esc.campaignId,
+          campaignName: campaignName
+        };
+        await db.withdrawals.save(newW);
+        await addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${esc.amount.toLocaleString()} untuk campaign "${campaignName}" ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
+      }
+    } else {
+      // Fallback: create a single withdrawal for the remaining amount
+      const newW: WithdrawalTx = {
+        id: "w-" + Date.now(),
+        influencerId: currentUser.id,
+        influencerName: currentUser.name,
+        amount: earnedReleased,
+        bankName: withdrawBank,
+        accountNo: withdrawAccountNo,
+        accountHolder: withdrawAccountHolder,
+        status: "pending",
+        date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })
+      };
+      await db.withdrawals.save(newW);
+      await addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${earnedReleased.toLocaleString()} ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
+    }
     
     setIsWithdrawModalOpen(false);
     setWithdrawAccountNo("");
@@ -337,7 +370,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
     setAlertInfo({
       isOpen: true,
       title: "Penarikan Diajukan",
-      message: `Berhasil mengajukan penarikan! Dana sebesar Rp${newW.amount.toLocaleString()} akan segera diproses ke rekening ${newW.bankName} Anda dalam waktu maksimal 1x24 jam kerja.`,
+      message: `Berhasil mengajukan penarikan! Permintaan penarikan Anda telah dikirim dan kini menunggu approval dari partner UMKM.`,
       type: "success"
     });
   };
@@ -365,7 +398,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
 
   // Calculate earnings and withdrawals
   const rawEarnedReleased = escrows.filter(e => e.status === "released").reduce((sum, current) => sum + current.amount, 0);
-  const withdrawnTotal = withdrawals.filter(w => w.status === 'completed' || w.status === 'pending').reduce((sum, current) => sum + current.amount, 0);
+  const withdrawnTotal = withdrawals.filter(w => w.status === 'completed' || w.status === 'pending' || w.status === 'approved_by_umkm').reduce((sum, current) => sum + current.amount, 0);
   const earnedReleased = Math.max(0, rawEarnedReleased - withdrawnTotal);
 
   const earnedLocked = escrows.filter(e => e.status === "locked" || e.status === "pending").reduce((sum, current) => sum + current.amount, 0);

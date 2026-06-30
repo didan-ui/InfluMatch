@@ -82,6 +82,9 @@ export interface WithdrawalTx {
   bankName: string;
   accountNo: string;
   accountHolder: string;
-  status: 'pending' | 'completed' | 'rejected';
+  status: 'pending' | 'completed' | 'rejected' | 'approved_by_umkm';
   date: string;
+  umkmId?: string;
+  campaignId?: string;
+  campaignName?: string;
 }

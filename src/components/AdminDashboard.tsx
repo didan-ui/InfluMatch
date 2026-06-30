@@ -694,7 +694,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-sand/50">
-                    {withdrawals.map(w => (
+                    {withdrawals.filter(w => w.status !== "pending").map(w => (
                       <tr key={w.id} className="hover:bg-brand-bg/10">
                         <td className="py-3.5 px-4 font-bold">{w.influencerName}</td>
                         <td className="py-3.5 px-4 text-brand-text-soft font-bold">{w.bankName}</td>
@@ -703,15 +703,18 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         <td className="py-3.5 px-4 font-mono font-bold text-brand-sage-dark">Rp{w.amount.toLocaleString()}</td>
                         <td className="py-3.5 px-4 font-mono">{w.date}</td>
                         <td className="py-3.5 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] tracking-wide ${
-                            w.status === "completed" ? "bg-brand-sage text-brand-sage-dark font-sans font-bold" :
-                            w.status === "rejected" ? "bg-red-50 text-red-700 bg-[#FFF0F0] border border-red-250/20" : "bg-brand-sky text-brand-sky-dark font-sans"
+                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold uppercase text-[9px] tracking-wide border ${
+                            w.status === "completed" ? "bg-brand-sage text-brand-sage-dark border-brand-sage-dark/20" :
+                            w.status === "rejected" ? "bg-red-100 text-red-700 border-red-200" : 
+                            "bg-indigo-100 text-indigo-800 border border-indigo-200"
                           }`}>
-                            {w.status === "completed" ? "Selesai" : w.status === "rejected" ? "Ditolak" : "Tertunda"}
+                            {w.status === "completed" ? "Selesai" : 
+                             w.status === "rejected" ? "Ditolak" : 
+                             "Butuh Transfer"}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right space-x-2">
-                          {w.status === "pending" ? (
+                          {w.status === "approved_by_umkm" ? (
                             <>
                               <button
                                 onClick={() => handleApproveWithdrawal(w.id)}
@@ -732,9 +735,9 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         </td>
                       </tr>
                     ))}
-                    {withdrawals.length === 0 && (
+                    {withdrawals.filter(w => w.status !== "pending").length === 0 && (
                       <tr>
-                        <td colSpan={8} className="py-10 text-center text-brand-text-soft">Tidak ada pengajuan penarikan dana saat ini.</td>
+                        <td colSpan={8} className="py-10 text-center text-brand-text-soft">Tidak ada pengajuan penarikan dana yang telah disetujui UMKM saat ini.</td>
                       </tr>
                     )}
                   </tbody>
