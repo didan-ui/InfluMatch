@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx } from "../types";
 
 // Ambil variabel lingkungan Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://your-supabase-project.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "your-anon-key";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://gittiyubqpdojxrcsstf.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpdHRpeXVicXBkb2p4cmNzc3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NjAyODAsImV4cCI6MjA5ODIzNjI4MH0.GuaA5ftcUbPG_jKYCGeGKWybL26UmAlSzTKeMtuUOds";
 
 /**
  * Supabase Client yang siap digunakan untuk integrasi database riil.
