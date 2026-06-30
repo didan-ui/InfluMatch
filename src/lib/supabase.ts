@@ -19,6 +19,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Anda tinggal merefaktorkan pemanggilan di `src/utils.ts` atau komponen dashboard langsung ke fungsi-fungsi di bawah ini:
  */
 
+export function mapDbRowToUser(row: any): User {
+  if (!row) return row;
+  return {
+    id: row.id,
+    email: row.email,
+    password: row.password,
+    name: row.name,
+    role: row.role,
+    city: row.city,
+    brandName: row.brand_name !== undefined ? row.brand_name : row.brandName,
+    brandCategory: row.brand_category !== undefined ? row.brand_category : row.brandCategory,
+    brandDescription: row.brand_description !== undefined ? row.brand_description : row.brandDescription,
+    handle: row.handle,
+    followers: row.followers,
+    followersNum: row.followers_num !== undefined ? row.followers_num : row.followersNum,
+    pricePerPost: row.price_per_post !== undefined ? row.price_per_post : row.pricePerPost,
+    niche: row.niche,
+    avatarUrl: row.avatar_url !== undefined ? row.avatar_url : row.avatarUrl,
+    isApproved: row.is_approved !== undefined ? row.is_approved : row.isApproved,
+    engagement: row.engagement,
+    rating: row.rating !== undefined ? Number(row.rating) : row.rating,
+    status: row.status,
+    statusReason: row.status_reason !== undefined ? row.status_reason : row.statusReason,
+    warningsCount: row.warnings_count !== undefined ? row.warnings_count : row.warningsCount
+  };
+}
+
 export const supabaseDb = {
   users: {
     // Mendapatkan semua pengguna atau filter berdasarkan kriteria
@@ -29,7 +56,7 @@ export const supabaseDb = {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return (data || []) as unknown as User[];
+      return (data || []).map(mapDbRowToUser);
     },
 
     // Cari pengguna berdasarkan ID
@@ -41,7 +68,7 @@ export const supabaseDb = {
         .single();
       
       if (error) return null;
-      return data as unknown as User;
+      return mapDbRowToUser(data);
     },
 
     // Menyimpan pengguna baru (Register)
@@ -72,7 +99,7 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return data as unknown as User;
+      return mapDbRowToUser(data);
     },
 
     // Memperbarui profil pengguna
@@ -101,7 +128,7 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return data as unknown as User;
+      return mapDbRowToUser(data);
     },
 
     // Menghapus pengguna

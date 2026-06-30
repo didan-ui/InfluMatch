@@ -1493,8 +1493,14 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                         latestMsg
                       }];
                     });
+                    
+                    const sortedMatches = [...matches].sort((a, b) => {
+                      const timeA = a.latestMsg ? new Date(a.latestMsg.timestamp).getTime() : 0;
+                      const timeB = b.latestMsg ? new Date(b.latestMsg.timestamp).getTime() : 0;
+                      return timeB - timeA;
+                    });
 
-                    if (matches.length === 0) {
+                    if (sortedMatches.length === 0) {
                       return (
                         <div className="p-8 text-center text-xs text-brand-text-light font-medium leading-relaxed">
                           Tidak ada partner kolaborasi aktif.<br/>
@@ -1503,7 +1509,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                       );
                     }
 
-                    return matches.map((m) => {
+                    return sortedMatches.map((m) => {
                       const isActiveThread = selectedChatCampaignId === m.campaignId && selectedChatPartnerId === m.partnerId;
                       return (
                         <div
