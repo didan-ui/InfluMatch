@@ -24,29 +24,28 @@ export default function LoginPage({ onLoginSuccess, onNavigateToRegister, onNavi
       return;
     }
 
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
+    const users = getDbUsers();
+    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setError(data.error || "Gagal masuk. Silakan periksa kembali email dan kata sandi Anda.");
-        return;
-      }
-
-      // Store JWT token in sessionStorage for API route authentication
-      sessionStorage.setItem("im_jwt_token", data.token);
-
-      // Success!
-      await addDbLog(data.user.name, "Login Berhasil (JWT)", `${data.user.name} berhasil melakukan login secara aman dengan JWT sebagai ${data.user.role.toUpperCase()}`, data.user.role);
-      onLoginSuccess(data.user);
-    } catch (err: any) {
-      console.error("Login request failed:", err);
-      setError("Gagal menghubungi server autentikasi JWT. Pastikan server dev berjalan.");
+    if (!foundUser) {
+      setError("Email tidak ditemukan. Silakan daftarkan akun baru jika belum terdaftar.");
+      return;
     }
+
+    if (foundUser.role === "admin") {
+      setError("Akses Ditolak. Akun Admin tidak dapat masuk melalui halaman login utama ini. Silakan gunakan portal khusus Admin.");
+      return;
+    }
+
+    const hashedInput = await hashPassword(password);
+    if (foundUser.password && foundUser.password !== hashedInput) {
+      setError("Kata sandi salah. Silakan coba lagi.");
+      return;
+    }
+
+    // Success!
+    addDbLog(foundUser.name, "Login Berhasil", `${foundUser.name} berhasil melakukan login sebagai ${foundUser.role.toUpperCase()}`, foundUser.role);
+    onLoginSuccess(foundUser);
   };
 
   return (

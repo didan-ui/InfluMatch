@@ -24,9 +24,6 @@ export interface User {
   isApproved: boolean;
   engagement?: string;
   rating?: number;
-  bankName?: string;
-  accountNo?: string;
-  accountHolder?: string;
 }
 
 export interface CampaignInfluencer {
@@ -85,9 +82,6 @@ export interface WithdrawalTx {
   bankName: string;
   accountNo: string;
   accountHolder: string;
-  status: 'pending' | 'completed' | 'rejected' | 'approved_by_umkm';
+  status: 'pending' | 'completed' | 'rejected';
   date: string;
-  umkmId?: string;
-  campaignId?: string;
-  campaignName?: string;
 }

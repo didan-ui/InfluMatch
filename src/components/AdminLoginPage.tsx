@@ -27,33 +27,27 @@ export default function AdminLoginPage({ onLoginSuccess, onNavigateToWelcome }: 
         return;
       }
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
+      const users = getDbUsers();
+      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setError(data.error || "Kredensial salah atau Anda tidak memiliki akses Administrator.");
+      if (!foundUser || foundUser.role !== "admin") {
+        setError("Kredensial salah atau Anda tidak memiliki akses Administrator.");
         setLoading(false);
         return;
       }
 
-      if (data.user.role !== "admin") {
-        setError("Akses Ditolak. Anda tidak memiliki akses Administrator.");
+      const hashedInput = await hashPassword(password);
+      if (foundUser.password && foundUser.password !== hashedInput) {
+        setError("Kata sandi Administrator salah. Silakan coba lagi.");
         setLoading(false);
         return;
       }
-
-      // Store JWT token in sessionStorage
-      sessionStorage.setItem("im_jwt_token", data.token);
 
       // Success
-      await addDbLog(data.user.name, "Login Admin (JWT)", "Administrator berhasil masuk sistem secara aman dengan JWT Token", "admin");
-      onLoginSuccess(data.user);
+      addDbLog(foundUser.name, "Login Admin", "Administrator berhasil masuk sistem", "admin");
+      onLoginSuccess(foundUser);
     } catch (err) {
-      setError("Gagal menghubungi server autentikasi JWT. Pastikan server dev berjalan.");
+      setError("Terjadi kesalahan sistem.");
     } finally {
       setLoading(false);
     }

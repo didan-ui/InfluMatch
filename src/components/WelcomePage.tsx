@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { User, Campaign } from "../types";
 import { getDbUsers, getDbCampaigns } from "../utils";
 import { motion, AnimatePresence } from "motion/react";
@@ -37,15 +37,9 @@ interface WelcomePageProps {
 }
 
 export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }: WelcomePageProps) {
-  // Load data async from Supabase
-  const [users, setUsers] = useState<User[]>([]);
-  const [campaigns, setCampaignsState] = useState<Campaign[]>([]);
-
-  useEffect(() => {
-    getDbUsers().then(setUsers).catch(console.error);
-    getDbCampaigns().then(data => setCampaignsState(data.filter(c => c.status !== "cancelled"))).catch(console.error);
-  }, []);
-
+  // Load data
+  const users = getDbUsers();
+  const campaigns = getDbCampaigns().filter(c => c.status !== "cancelled");
   const influencers = users.filter(u => u.role === "influencer");
 
   // Filter state for creators preview
@@ -744,18 +738,18 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                 >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-brand-sky rounded-full flex items-center justify-center font-bold text-brand-sky-dark text-xs select-none overflow-hidden">
-                        {inf.avatarUrl && inf.avatarUrl.startsWith("http") ? (
-                          <img 
-                            src={inf.avatarUrl} 
-                            alt={inf.name} 
-                            className="w-full h-full object-cover" 
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          inf.avatarUrl || inf.name.slice(0, 2).toUpperCase()
-                        )}
-                      </div>
+                      {inf.avatarUrl && (inf.avatarUrl.startsWith("http") || inf.avatarUrl.startsWith("/") || inf.avatarUrl.startsWith("data:")) ? (
+                        <img 
+                          src={inf.avatarUrl} 
+                          alt={inf.name} 
+                          className="w-10 h-10 rounded-full object-cover border border-brand-sand shadow-inner select-none shrink-0" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-brand-sky rounded-full flex items-center justify-center font-bold text-brand-sky-dark text-xs select-none border border-brand-sand shadow-inner shrink-0">
+                          {inf.avatarUrl || inf.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <h4 className="font-serif text-sm font-bold text-brand-text leading-tight">{inf.name}</h4>
                         <p className="text-[10px] text-brand-text-light font-mono leading-none mt-1">{inf.handle}</p>

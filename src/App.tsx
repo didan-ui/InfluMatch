@@ -17,7 +17,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  // Attempt to restore session on boot using secure JWT token verification
+  // Attempt to restore session on boot
   useEffect(() => {
     async function initApp() {
       const configured = isSupabaseConfigured();
@@ -29,35 +29,12 @@ export default function App() {
         setSyncStatus(ok ? "success" : "error");
       }
 
-      const token = sessionStorage.getItem("im_jwt_token");
-      if (token) {
-        try {
-          const response = await fetch("/api/auth/verify", {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          });
-          const data = await response.json();
-          if (response.ok && data.success) {
-            setCurrentUser(data.user);
-            sessionStorage.setItem("im_current_user", JSON.stringify(data.user));
-            setScreen("main");
-            return;
-          } else {
-            sessionStorage.removeItem("im_jwt_token");
-            sessionStorage.removeItem("im_current_user");
-          }
-        } catch (e) {
-          console.error("JWT token verification error on boot:", e);
-        }
-      }
-
-      // Fallback to basic session storage if no network or no token
       const savedUser = sessionStorage.getItem("im_current_user");
       if (savedUser) {
         try {
           const parsed = JSON.parse(savedUser) as User;
-          const usersInDb = await getDbUsers();
+          // Verify user still exists in DB
+          const usersInDb = getDbUsers();
           const valid = usersInDb.find(u => u.id === parsed.id);
           if (valid) {
             setCurrentUser(valid);
@@ -68,7 +45,6 @@ export default function App() {
           }
         } catch (e) {
           console.error("Session restore error:", e);
-          setScreen("welcome");
         }
       } else {
         setScreen("welcome");
@@ -112,7 +88,7 @@ export default function App() {
   if (isSyncing) {
     return (
       <div className="min-h-screen bg-[#FAF6F0] flex flex-col items-center justify-center p-6 text-brand-text">
-        <motion.div
+        <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-brand-white border border-brand-sand rounded-3xl max-w-sm w-full p-8 shadow-xl text-center space-y-4"
@@ -135,19 +111,19 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans text-brand-text flex flex-col selection:bg-brand-blush/65 select-none md:select-text overflow-x-hidden">
-
+    <div className="min-h-screen bg-brand-bg font-sans text-brand-text flex flex-col selection:bg-brand-blush/65 select-none md:select-text">
+      
       <AnimatePresence mode="wait">
-
+        
         {screen === "welcome" && (
-          <motion.div
-            key="welcome"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.div 
+            key="welcome" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
             className="flex-grow flex flex-col"
           >
-            <WelcomePage
+            <WelcomePage 
               onNavigateToLogin={() => setScreen("login")}
               onNavigateToRegister={() => setScreen("register")}
             />
@@ -155,14 +131,14 @@ export default function App() {
         )}
 
         {screen === "login" && (
-          <motion.div
-            key="login"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.div 
+            key="login" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
             className="flex-1"
           >
-            <LoginPage
+            <LoginPage 
               onLoginSuccess={handleLoginSuccess}
               onNavigateToRegister={() => setScreen("register")}
               onNavigateToWelcome={() => setScreen("welcome")}
@@ -171,14 +147,14 @@ export default function App() {
         )}
 
         {screen === "register" && (
-          <motion.div
-            key="register"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.div 
+            key="register" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
             className="flex-1"
           >
-            <RegisterPage
+            <RegisterPage 
               onRegisterSuccess={() => setScreen("login")}
               onNavigateToLogin={() => setScreen("login")}
               onNavigateToWelcome={() => setScreen("welcome")}
@@ -187,14 +163,14 @@ export default function App() {
         )}
 
         {screen === "admin-login" && (
-          <motion.div
-            key="admin-login"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.div 
+            key="admin-login" 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
             className="flex-1"
           >
-            <AdminLoginPage
+            <AdminLoginPage 
               onLoginSuccess={(user) => {
                 // Clear URL hash quietly
                 window.location.hash = "";
@@ -209,15 +185,15 @@ export default function App() {
         )}
 
         {screen === "main" && currentUser && (
-          <motion.div
-            key="main"
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
+          <motion.div 
+            key="main" 
+            initial={{ opacity: 0, y: 5 }} 
+            animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0 }}
             className="flex-grow flex flex-col"
           >
             {/* Nav Header Row */}
-            <Topbar currentUser={currentUser} onLogout={handleLogout} />
+            <Topbar currentUser={currentUser} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />
 
             {/* Main Application Area (Dynamic Role dashboard) */}
             <div className="flex-1 flex flex-col md:flex-row">
@@ -235,7 +211,7 @@ export default function App() {
 
               {currentUser.role === "admin" && (
                 <div className="flex-1">
-                  <AdminDashboard currentUser={currentUser} onUserUpdate={handleUserUpdate} />
+                  <AdminDashboard currentUser={currentUser} />
                 </div>
               )}
             </div>

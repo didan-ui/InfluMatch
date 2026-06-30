@@ -7,15 +7,14 @@ import {
   saveDbEscrow, 
   getDbUsers, 
   addDbLog,
-  db
+  db,
+  updateProfilePicture
 } from "../utils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Inbox, Check, X, FileText, Send, DollarSign, Wallet, 
-  Award, TrendingUp, Settings, MapPin, RefreshCw, Star, ExternalLink, HelpCircle, Search 
+  Award, TrendingUp, Settings, MapPin, RefreshCw, Star, ExternalLink, HelpCircle, Search, Camera
 } from "lucide-react";
-import CustomAlert from "./CustomAlert";
-import AvatarUpload from "./AvatarUpload";
 
 interface InfluencerDashboardProps {
   currentUser: User;
@@ -24,19 +23,6 @@ interface InfluencerDashboardProps {
 
 export default function InfluencerDashboard({ currentUser, onUserUpdate }: InfluencerDashboardProps) {
   const [activeTab, setActiveTab] = useState<"discover" | "invites" | "active" | "escrow" | "settings">("discover");
-
-  // Custom Alert state
-  const [alertInfo, setAlertInfo] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: "success" | "error" | "info" | "warning";
-  }>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "info"
-  });
   
   // Storage states
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -61,9 +47,6 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
   const [handle, setHandle] = useState(currentUser.handle || "@siska");
   const [city, setCity] = useState(currentUser.city || "Malang");
   const [niche, setNiche] = useState<string[]>(currentUser.niche || []);
-  const [bankName, setBankName] = useState(currentUser.bankName || "BCA");
-  const [accountNo, setAccountNo] = useState(currentUser.accountNo || "");
-  const [accountHolder, setAccountHolder] = useState(currentUser.accountHolder || currentUser.name);
   const [showSettingsSuccess, setShowSettingsSuccess] = useState(false);
 
   // Withdraw states
@@ -76,8 +59,8 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
   const [selectedUmkm, setSelectedUmkm] = useState<User | null>(null);
   const [showUmkmProfileModal, setShowUmkmProfileModal] = useState(false);
 
-  const handleViewUmkmProfile = async (umkmId: string) => {
-    const allUsers = await getDbUsers();
+  const handleViewUmkmProfile = (umkmId: string) => {
+    const allUsers = getDbUsers();
     const found = allUsers.find(u => u.id === umkmId);
     if (found) {
       setSelectedUmkm(found);
@@ -99,36 +82,29 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
     }
   };
 
-  const handleUpdateStatus = async (campaignId: string, newStatus: 'in_progress' | 'brief_ready') => {
-    const allCampaigns = await getDbCampaigns();
+  const handleUpdateStatus = (campaignId: string, newStatus: 'in_progress' | 'brief_ready') => {
+    const allCampaigns = getDbCampaigns();
     const camp = allCampaigns.find(c => c.id === campaignId);
     if (camp) {
       const idx = camp.influencers.findIndex(i => i.influencerId === currentUser.id);
       if (idx > -1) {
         camp.influencers[idx].status = newStatus;
-        await saveDbCampaign(camp);
-        await addDbLog(currentUser.name, "Update Progress", `${currentUser.name} mengubah status pengerjaan campaign "${camp.name}" menjadi "${newStatus === 'in_progress' ? 'In Progress' : 'Pending'}"`, "influencer");
-        await forceRefresh();
-        setAlertInfo({
-          isOpen: true,
-          title: "Progress Diperbarui",
-          message: `Status pengerjaan berhasil diubah menjadi: ${newStatus === 'in_progress' ? 'In Progress (Sedang Dikerjakan)' : 'Pending'}`,
-          type: "success"
-        });
+        saveDbCampaign(camp);
+        addDbLog(currentUser.name, "Update Progress", `${currentUser.name} mengubah status pengerjaan campaign "${camp.name}" menjadi "${newStatus === 'in_progress' ? 'In Progress' : 'Pending'}"`, "influencer");
+        forceRefresh();
+        alert(`Status pengerjaan berhasil diubah menjadi: ${newStatus === 'in_progress' ? 'In Progress (Sedang Dikerjakan)' : 'Pending'}`);
       }
     }
   };
 
-  const forceRefresh = async () => {
-    const [allCampaigns, allEscrowsFull, allWithdrawals] = await Promise.all([
-      getDbCampaigns(),
-      getDbEscrow(),
-      db.withdrawals.list()
-    ]);
+  const forceRefresh = () => {
+    const allCampaigns = getDbCampaigns();
     setAllDbCampaigns(allCampaigns);
+    // Filter campaigns where this influencer is listed
     const myCamps = allCampaigns.filter(c => c.influencers.some(i => i.influencerId === currentUser.id));
-    const allEscrows = allEscrowsFull.filter(e => e.influencerId === currentUser.id);
-    const myWithdrawals = allWithdrawals.filter(w => w.influencerId === currentUser.id);
+    const allEscrows = getDbEscrow().filter(e => e.influencerId === currentUser.id);
+    const myWithdrawals = db.withdrawals.list().filter(w => w.influencerId === currentUser.id);
+
     setCampaigns(myCamps);
     setEscrows(allEscrows);
     setWithdrawals(myWithdrawals);
@@ -146,20 +122,16 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
   }, [currentUser]);
 
   // Handle proactive campaign application (Tawaran UMKM)
-  const applyForCampaign = async (campaignId: string) => {
-    const allCampaigns = await getDbCampaigns();
+  const applyForCampaign = (campaignId: string) => {
+    const allCampaigns = getDbCampaigns();
     const camp = allCampaigns.find(c => c.id === campaignId);
     if (camp) {
       if (camp.influencers.some(i => i.influencerId === currentUser.id)) {
-        setAlertInfo({
-          isOpen: true,
-          title: "Sudah Terdaftar",
-          message: "Anda sudah mengirimkan lamaran atau tergabung dalam proyek campaign ini.",
-          type: "warning"
-        });
+        alert("Anda sudah mengirimkan lamaran atau tergabung dalam proyek ini.");
         return;
       }
 
+      // Add influencer as "applied" so they wait for UMKM's approval
       camp.influencers.push({
         influencerId: currentUser.id,
         influencerName: currentUser.name,
@@ -169,107 +141,91 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       if (camp.status === "waiting") {
         camp.status = "active";
       }
-      await saveDbCampaign(camp);
+      saveDbCampaign(camp);
 
-      await addDbLog(currentUser.name, "Melamar Kerjasama", `${currentUser.name} melamar bergabung ke campaign "${camp.name}"`, "influencer");
-      await forceRefresh();
-      setAlertInfo({
-        isOpen: true,
-        title: "Lamaran Terkirim",
-        message: `Pengajuan berhasil dikirim! Pengajuan Anda ke campaign "${camp.name}" sedang menunggu persetujuan dari pihak pemilik UMKM.`,
-        type: "success"
-      });
+      addDbLog(currentUser.name, "Melamar Kerjasama", `${currentUser.name} melamar bergabung ke campaign "${camp.name}"`, "influencer");
+      forceRefresh();
+      alert(`Pengajuan berhasil dikirim! Pengajuan Anda ke campaign "${camp.name}" sedang menunggu persetujuan dari pihak UMKM.`);
     }
   };
 
   // Handle accepting brand invitations
-  const acceptInvitation = async (campaignId: string) => {
-    const allCampaigns = await getDbCampaigns();
+  const acceptInvitation = (campaignId: string) => {
+    const allCampaigns = getDbCampaigns();
     const camp = allCampaigns.find(c => c.id === campaignId);
     if (camp) {
       const index = camp.influencers.findIndex(i => i.influencerId === currentUser.id);
       if (index > -1) {
+        // Change status from 'invited' to 'brief_ready'
         camp.influencers[index].status = "brief_ready";
-        await saveDbCampaign(camp);
-        await addDbLog(currentUser.name, "Menerima Kampanye", `${currentUser.name} menyetujui undangan brand dari kampanye "${camp.name}"`, "influencer");
-        await forceRefresh();
-        setAlertInfo({
-          isOpen: true,
-          title: "Undangan Diterima",
-          message: "Undangan berhasil disetujui! Silakan baca instruksi Brief Kampanye untuk memulai pengerjaan konten Anda.",
-          type: "success"
-        });
+        saveDbCampaign(camp);
+
+        addDbLog(currentUser.name, "Menerima Kampanye", `${currentUser.name} menyetujui undangan brand dari kampanye "${camp.name}"`, "influencer");
+        forceRefresh();
+        alert("Undangan diterima! Silakan baca Brief Kampanye untuk memulai pengerjaan konten.");
       }
     }
   };
 
   // Handle declining brand invitations
-  const declineInvitation = async (campaignId: string) => {
-    const allCampaigns = await getDbCampaigns();
+  const declineInvitation = (campaignId: string) => {
+    const allCampaigns = getDbCampaigns();
     const camp = allCampaigns.find(c => c.id === campaignId);
     if (camp) {
+      // Remove influencer from list
       camp.influencers = camp.influencers.filter(i => i.influencerId !== currentUser.id);
       if (camp.influencers.length === 0) {
         camp.status = "waiting";
       }
-      await saveDbCampaign(camp);
-      await addDbLog(currentUser.name, "Menolak Kampanye", `${currentUser.name} menolak undangan kampanye "${camp.name}"`, "influencer");
-      await forceRefresh();
-      setAlertInfo({
-        isOpen: true,
-        title: "Undangan Ditolak",
-        message: `Anda telah menolak undangan kolaborasi dari campaign "${camp.name}".`,
-        type: "info"
-      });
+      saveDbCampaign(camp);
+
+      addDbLog(currentUser.name, "Menolak Kampanye", `${currentUser.name} menolak undangan kampanye "${camp.name}"`, "influencer");
+      forceRefresh();
+      alert("Undangan ditolak.");
     }
   };
 
   // Handle uploading completed content URL
-  const submitContent = async (campaignId: string) => {
+  const submitContent = (campaignId: string) => {
     const url = submissionUrls[campaignId];
     if (!url) {
-      setAlertInfo({
-        isOpen: true,
-        title: "Tautan Kosong",
-        message: "Mohon masukkan tautan video/postingan sosial Anda terlebih dahulu.",
-        type: "warning"
-      });
+      alert("Mohon masukkan tautan video/postingan sosial Anda terlebih dahulu.");
       return;
     }
 
-    const allCampaigns = await getDbCampaigns();
+    const allCampaigns = getDbCampaigns();
     const camp = allCampaigns.find(c => c.id === campaignId);
     if (camp) {
       const index = camp.influencers.findIndex(i => i.influencerId === currentUser.id);
       if (index > -1) {
+        // Update milestone status to 'content_uploaded'
         camp.influencers[index].status = "content_uploaded";
         camp.influencers[index].submissionUrl = url;
-        await saveDbCampaign(camp);
+        saveDbCampaign(camp);
 
-        const allEscrows = await getDbEscrow();
+        // Update corresponding escrow status to 'pending' (ready for release)
+        const allEscrows = getDbEscrow();
         const tx = allEscrows.find(e => e.campaignId === campaignId && e.influencerId === currentUser.id);
         if (tx) {
           tx.status = "pending";
-          await saveDbEscrow(tx);
+          saveDbEscrow(tx);
         }
 
-        await addDbLog(currentUser.name, "Menyerahkan Konten", `${currentUser.name} mengunggah posting video konten untuk "${camp.name}"`, "influencer");
+        addDbLog(currentUser.name, "Menyerahkan Konten", `${currentUser.name} mengunggah posting video konten untuk "${camp.name}"`, "influencer");
+        
+        // clear local input
         setSubmissionUrls(prev => ({ ...prev, [campaignId]: "" }));
-        await forceRefresh();
-        setAlertInfo({
-          isOpen: true,
-          title: "Konten Diserahkan",
-          message: "Konten Anda berhasil dikirim ke partner UMKM! Dana Escrow Anda kini berstatus 'Pending Approval' menunggu persetujuan dan pelepasan dana dari pemilik UMKM.",
-          type: "success"
-        });
+        forceRefresh();
+        alert("Konten Anda berhasil dikirim ke partner UMKM! Dana Escrow Anda kini berstatus 'Pending Approval' menunggu pelepasan dana dari pemilik UMKM.");
       }
     }
   };
 
   // Update settings info
-  const handleUpdateSettings = async (e: React.FormEvent) => {
+  const handleUpdateSettings = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Map string followers count into clean numeric value for search and filter indexing
     let followersNum = 5100;
     if (followers === "5.1K") followersNum = 5100;
     else if (followers === "7.8K") followersNum = 7800;
@@ -277,21 +233,18 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
     else if (followers === "12K") followersNum = 12000;
     else if (followers === "25K") followersNum = 25000;
 
-    const updated = await db.users.update(currentUser.id, {
+    const updated = db.users.update(currentUser.id, {
       name: profileName,
       pricePerPost: price,
       followers: followers,
       followersNum: followersNum,
       handle: handle,
       city: city,
-      niche: niche,
-      bankName: bankName,
-      accountNo: accountNo,
-      accountHolder: accountHolder
+      niche: niche
     });
 
     if (updated) {
-      await addDbLog(profileName, "Update Setelan", "Memperbarui metrik penawaran creator", "influencer");
+      addDbLog(profileName, "Update Setelan", "Memperbarui metrik penawaran creator", "influencer");
       if (onUserUpdate) {
         onUserUpdate(updated);
       }
@@ -300,118 +253,38 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
     }
   };
 
-  const handleAvatarUploadSuccess = async (avatarUrl: string) => {
-    try {
-      const updated = await db.users.update(currentUser.id, {
-        avatarUrl: avatarUrl
-      });
-      if (updated && onUserUpdate) {
-        onUserUpdate(updated);
-        await addDbLog(currentUser.name, "Update Foto Profil", "Mengunggah foto profil baru", "influencer");
-        setAlertInfo({
-          isOpen: true,
-          title: "Foto Profil Diperbarui",
-          message: "Foto profil Anda berhasil diunggah dan disimpan ke server.",
-          type: "success"
-        });
-      }
-    } catch (err: any) {
-      setAlertInfo({
-        isOpen: true,
-        title: "Gagal Memperbarui Foto",
-        message: err.message || "Terjadi kesalahan saat menyimpan foto profil.",
-        type: "error"
-      });
-    }
-  };
-
-  const handleOpenWithdrawModal = () => {
-    setWithdrawBank(bankName);
-    setWithdrawAccountNo(accountNo);
-    setWithdrawAccountHolder(accountHolder || currentUser.name);
-    setIsWithdrawModalOpen(true);
-  };
-
-  const handleRequestWithdrawal = async (e: React.FormEvent) => {
+  const handleRequestWithdrawal = (e: React.FormEvent) => {
     e.preventDefault();
     if (earnedReleased <= 0) {
-      setAlertInfo({
-        isOpen: true,
-        title: "Saldo Tidak Cukup",
-        message: "Anda tidak memiliki saldo yang siap dicairkan saat ini.",
-        type: "warning"
-      });
+      alert("Anda tidak memiliki saldo yang siap dicairkan.");
       return;
     }
 
     if (!withdrawAccountNo.trim()) {
-      setAlertInfo({
-        isOpen: true,
-        title: "Informasi Bank",
-        message: "Mohon masukkan nomor rekening bank Anda terlebih dahulu.",
-        type: "warning"
-      });
+      alert("Mohon masukkan nomor rekening bank Anda.");
       return;
     }
 
-    // Identify which released escrows are being withdrawn
-    const releasedEscrows = escrows.filter(ev => ev.status === "released");
-    const unwithdrawnEscrows = releasedEscrows.filter(ev => {
-      return !withdrawals.some(w => w.campaignId === ev.campaignId && w.status !== "rejected");
-    });
+    const newW: WithdrawalTx = {
+      id: "w-" + Date.now(),
+      influencerId: currentUser.id,
+      influencerName: currentUser.name,
+      amount: earnedReleased,
+      bankName: withdrawBank,
+      accountNo: withdrawAccountNo,
+      accountHolder: withdrawAccountHolder,
+      status: "pending",
+      date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })
+    };
 
-    if (unwithdrawnEscrows.length > 0) {
-      // Create a separate withdrawal transaction for each campaign's escrow earnings
-      for (let i = 0; i < unwithdrawnEscrows.length; i++) {
-        const esc = unwithdrawnEscrows[i];
-        const camp = campaigns.find(c => c.id === esc.campaignId);
-        const umkmId = camp ? camp.umkmId : "";
-        const campaignName = camp ? camp.name : esc.campaignName;
-
-        const newW: WithdrawalTx = {
-          id: `w-${Date.now()}-${i}`,
-          influencerId: currentUser.id,
-          influencerName: currentUser.name,
-          amount: esc.amount,
-          bankName: withdrawBank,
-          accountNo: withdrawAccountNo,
-          accountHolder: withdrawAccountHolder,
-          status: "pending",
-          date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' }),
-          umkmId: umkmId,
-          campaignId: esc.campaignId,
-          campaignName: campaignName
-        };
-        await db.withdrawals.save(newW);
-        await addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${esc.amount.toLocaleString()} untuk campaign "${campaignName}" ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
-      }
-    } else {
-      // Fallback: create a single withdrawal for the remaining amount
-      const newW: WithdrawalTx = {
-        id: "w-" + Date.now(),
-        influencerId: currentUser.id,
-        influencerName: currentUser.name,
-        amount: earnedReleased,
-        bankName: withdrawBank,
-        accountNo: withdrawAccountNo,
-        accountHolder: withdrawAccountHolder,
-        status: "pending",
-        date: new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric' })
-      };
-      await db.withdrawals.save(newW);
-      await addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${earnedReleased.toLocaleString()} ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
-    }
+    db.withdrawals.save(newW);
+    addDbLog(currentUser.name, "Tarik Dana", `Mengajukan penarikan Rp${earnedReleased.toLocaleString()} ke rekening ${withdrawBank} ${withdrawAccountNo}`, "influencer");
     
     setIsWithdrawModalOpen(false);
     setWithdrawAccountNo("");
-    await forceRefresh();
+    forceRefresh();
 
-    setAlertInfo({
-      isOpen: true,
-      title: "Penarikan Diajukan",
-      message: `Berhasil mengajukan penarikan! Permintaan penarikan Anda telah dikirim dan kini menunggu approval dari partner UMKM.`,
-      type: "success"
-    });
+    alert(`Berhasil mengajukan penarikan! Dana sebesar Rp${newW.amount.toLocaleString()} akan diproses ke rekening ${newW.bankName} Anda dalam waktu maksimal 1x24 jam kerja.`);
   };
 
   // Toggle niche tags
@@ -437,16 +310,20 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
 
   // Calculate earnings and withdrawals
   const rawEarnedReleased = escrows.filter(e => e.status === "released").reduce((sum, current) => sum + current.amount, 0);
-  const withdrawnTotal = withdrawals.filter(w => w.status === 'completed' || w.status === 'pending' || w.status === 'approved_by_umkm').reduce((sum, current) => sum + current.amount, 0);
+  const withdrawnTotal = withdrawals.filter(w => w.status === 'completed' || w.status === 'pending').reduce((sum, current) => sum + current.amount, 0);
   const earnedReleased = Math.max(0, rawEarnedReleased - withdrawnTotal);
 
   const earnedLocked = escrows.filter(e => e.status === "locked" || e.status === "pending").reduce((sum, current) => sum + current.amount, 0);
 
-  // Helper to get UMKM's city location (uses already-loaded users from state)
+  // Helper to get UMKM's city location
   const getUmkmCity = (umkmId: string) => {
-    // use allDbCampaigns indirectly — look up from in-memory state would need users state
-    // fallback to Malang as we don't hold users state here
-    return "Malang";
+    try {
+      const allUsers = getDbUsers();
+      const umkm = allUsers.find(u => u.id === umkmId);
+      return umkm?.city || "Malang";
+    } catch (e) {
+      return "Malang";
+    }
   };
 
   // Filter and sort discoverable campaigns
@@ -497,18 +374,18 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
       <aside className="w-full md:w-64 bg-brand-white border-r border-brand-sand shrink-0 py-6">
         <div className="px-6 pb-6 border-b border-brand-sand">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-brand-sage rounded-full flex items-center justify-center font-bold text-brand-sage-dark shadow-inner text-base overflow-hidden">
-              {currentUser.avatarUrl && currentUser.avatarUrl.startsWith("http") ? (
-                <img 
-                  src={currentUser.avatarUrl} 
-                  alt={currentUser.name} 
-                  className="w-full h-full object-cover" 
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                currentUser.avatarUrl || currentUser.name.slice(0, 2).toUpperCase()
-              )}
-            </div>
+            {currentUser.avatarUrl && (currentUser.avatarUrl.startsWith("http") || currentUser.avatarUrl.startsWith("/") || currentUser.avatarUrl.startsWith("data:")) ? (
+              <img 
+                src={currentUser.avatarUrl} 
+                alt={currentUser.name} 
+                className="w-12 h-12 rounded-full object-cover border border-brand-sand shadow-inner shrink-0" 
+                referrerPolicy="no-referrer" 
+              />
+            ) : (
+              <div className="w-12 h-12 bg-brand-sage rounded-full flex items-center justify-center font-bold text-brand-sage-dark shadow-inner text-base shrink-0">
+                {currentUser.avatarUrl || currentUser.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <div>
               <h3 className="font-serif font-bold text-brand-text truncate leading-tight">{currentUser.name}</h3>
               <p className="text-[11px] text-brand-text-light font-bold font-mono tracking-wide mt-0.5">{currentUser.handle}</p>
@@ -1049,25 +926,25 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
             {/* Balances indicators */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between text-left">
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-brand-text-light tracking-widest uppercase">SALDO SIAP DICAIRKAN (DANA BERHASIL)</p>
                   <h4 className="font-serif text-4xl font-black text-brand-sage-dark mt-2.5">Rp{earnedReleased.toLocaleString()}</h4>
-                  <p className="text-xs text-brand-text-soft mt-1 leading-normal">Telah disetujui penuh oleh Admin Utama dan telah ditransfer ke rekening bank terdaftar Anda.</p>
+                  <p className="text-xs text-brand-text-soft mt-1 leading-normal">Telah disetujui penuh oleh masing-masing pemilik brand partner Anda.</p>
                 </div>
                 <button
                   disabled={earnedReleased === 0}
-                  onClick={handleOpenWithdrawModal}
+                  onClick={() => setIsWithdrawModalOpen(true)}
                   className="w-full mt-6 py-3 rounded-xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 select-none cursor-pointer"
                 >
                   Ajukan Penarikan Dana Ke Rekening Bank
                 </button>
               </div>
 
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm text-left">
+              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm">
                 <p className="text-[10px] font-bold text-brand-text-light tracking-widest uppercase">DANA SEDANG TERIKAT (ESCROW DRAFT)</p>
                 <h4 className="font-serif text-4xl font-black text-brand-text-soft mt-2.5">Rp{earnedLocked.toLocaleString()}</h4>
-                <p className="text-xs text-brand-text-soft mt-2 leading-relaxed">Dana aman berada di Rekening Bersama Admin Utama. Dana akan segera ditransfer langsung oleh Admin setelah bukti pengerjaan konten Anda dinyatakan aman dan disetujui oleh tim verifikator.</p>
+                <p className="text-xs text-brand-text-soft mt-2 leading-relaxed">Dana terikat dalam penampungan aman. Akan otomatis cair setelah konten Anda diserahkan dan disetujui partner UMKM.</p>
               </div>
 
               <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm flex flex-col justify-between">
@@ -1296,18 +1173,57 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                   </div>
                 )}
 
-                {/* Avatar Upload component */}
-                <div className="mb-6 pb-6 border-b border-brand-sand/50">
-                  <AvatarUpload
-                    currentAvatarUrl={currentUser.avatarUrl}
-                    userName={currentUser.name}
-                    userId={currentUser.id}
-                    onUploadSuccess={handleAvatarUploadSuccess}
-                  />
-                </div>
-
                 <form onSubmit={handleUpdateSettings} className="space-y-4 text-xs font-bold uppercase tracking-wider text-brand-text-soft">
                   
+                  {/* Dedicated Photo Upload Widget */}
+                  <div className="p-4 bg-brand-bg/40 rounded-2xl border border-brand-sand/60 space-y-3">
+                    <div className="flex items-center gap-4">
+                      {currentUser.avatarUrl && (currentUser.avatarUrl.startsWith("http") || currentUser.avatarUrl.startsWith("/") || currentUser.avatarUrl.startsWith("data:")) ? (
+                        <img 
+                          src={currentUser.avatarUrl} 
+                          alt={currentUser.name} 
+                          className="w-14 h-14 rounded-full object-cover border border-brand-sand shadow-sm shrink-0" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-brand-blush text-brand-blush-dark flex items-center justify-center font-bold text-lg border border-brand-sand shadow-sm shrink-0">
+                          {currentUser.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <h4 className="font-serif text-xs font-bold text-brand-text normal-case">Foto Profil Kreator</h4>
+                        <p className="text-[9px] text-brand-text-soft uppercase tracking-wider font-bold">Rasio 1:1, Maksimal 2MB</p>
+                        
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('influencer-avatar-file-input-settings')?.click()}
+                          className="px-2.5 py-1 bg-brand-text hover:opacity-90 text-brand-white text-[9px] font-bold rounded-lg uppercase tracking-wide transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Camera className="w-3 h-3" /> Ubah Foto Profil
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      id="influencer-avatar-file-input-settings"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const publicUrl = await updateProfilePicture(currentUser.id, file);
+                          alert("Foto profil berhasil diperbarui!");
+                          if (onUserUpdate) {
+                            onUserUpdate({ ...currentUser, avatarUrl: publicUrl });
+                          }
+                        } catch (err: any) {
+                          alert(err.message || "Gagal mengunggah foto profil.");
+                        }
+                      }}
+                    />
+                  </div>
+
                   <div>
                     <label className="block mb-1.5 font-bold text-brand-text-soft">Nama Lengkap Kreator</label>
                     <input
@@ -1395,60 +1311,11 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                     </div>
                   </div>
 
-                  {/* PENGATURAN REKENING TRANSFER BANK */}
-                  <div className="pt-4 border-t border-brand-sand/60 space-y-4">
-                    <h4 className="text-xs font-serif font-bold text-brand-text normal-case tracking-normal flex items-center gap-1.5 mb-1">
-                      <Wallet className="w-4 h-4 text-brand-sage-dark" /> Rekening Bank Menerima Pembayaran
-                    </h4>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nama Bank</label>
-                        <select
-                          value={bankName}
-                          onChange={(e) => setBankName(e.target.value)}
-                          className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs cursor-pointer"
-                        >
-                          <option value="BCA">BCA</option>
-                          <option value="Mandiri">Mandiri</option>
-                          <option value="BNI">BNI</option>
-                          <option value="BRI">BRI</option>
-                          <option value="BSI">BSI</option>
-                          <option value="Gopay">Gopay / ShopeePay</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nomor Rekening</label>
-                        <input
-                          type="text"
-                          value={accountNo}
-                          onChange={(e) => setAccountNo(e.target.value)}
-                          placeholder="Contoh: 123456789"
-                          className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block mb-1.5 font-bold text-brand-text-soft normal-case">Nama Pemilik Rekening</label>
-                      <input
-                        type="text"
-                        value={accountHolder}
-                        onChange={(e) => setAccountHolder(e.target.value)}
-                        placeholder="Nama sesuai buku tabungan"
-                        className="w-full border border-brand-sand bg-brand-bg/40 rounded-2xl px-4 py-2.5 font-medium text-brand-text focus:outline-none text-xs"
-                        required
-                      />
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
                     className="w-full py-3.5 rounded-2xl bg-brand-text text-brand-white font-bold text-xs hover:opacity-90 active:scale-95 transition-all shadow-md cursor-pointer"
                   >
-                    Simpan Perubahan Metrik & Rekening
+                    Simpan Perubahan Metrik
                   </button>
 
                 </form>
@@ -1461,9 +1328,18 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                 <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-brand-sage/20 rounded-full blur-2xl -mr-8 -mt-8" />
                   <div className="flex items-center gap-4 border-b border-brand-sand/50 pb-4 mb-4">
-                    <div className="w-14 h-14 rounded-full bg-brand-blush flex items-center justify-center font-serif text-2xl font-black text-brand-blush-dark border-2 border-brand-white shadow-md">
-                      {profileName ? profileName.charAt(0).toUpperCase() : "I"}
-                    </div>
+                    {currentUser.avatarUrl && (currentUser.avatarUrl.startsWith("http") || currentUser.avatarUrl.startsWith("/") || currentUser.avatarUrl.startsWith("data:")) ? (
+                      <img 
+                        src={currentUser.avatarUrl} 
+                        alt={profileName} 
+                        className="w-14 h-14 rounded-full object-cover border-2 border-brand-white shadow-md shrink-0" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-brand-blush flex items-center justify-center font-serif text-2xl font-black text-brand-blush-dark border-2 border-brand-white shadow-md shrink-0">
+                        {profileName ? profileName.charAt(0).toUpperCase() : "I"}
+                      </div>
+                    )}
                     <div>
                       <h3 className="font-serif text-xl font-bold text-brand-text flex items-center gap-1.5">
                         {profileName} <span className="text-[10px] bg-brand-sage text-brand-sage-dark font-sans font-black px-2 py-0.5 rounded-md uppercase tracking-wide">CREATOR</span>
@@ -1561,9 +1437,18 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
 
               <div className="space-y-5 pt-2">
                 <div className="flex items-center gap-4 border-b border-brand-sand/40 pb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-blush-dark/10 flex items-center justify-center text-brand-blush-dark font-serif text-xl font-bold border border-brand-blush-dark/10 shrink-0">
-                    {selectedUmkm.brandName ? selectedUmkm.brandName.charAt(0).toUpperCase() : "B"}
-                  </div>
+                  {selectedUmkm.avatarUrl && (selectedUmkm.avatarUrl.startsWith("http") || selectedUmkm.avatarUrl.startsWith("/") || selectedUmkm.avatarUrl.startsWith("data:")) ? (
+                    <img 
+                      src={selectedUmkm.avatarUrl} 
+                      alt={selectedUmkm.brandName} 
+                      className="w-12 h-12 rounded-2xl object-cover border border-brand-sand shadow-inner shrink-0" 
+                      referrerPolicy="no-referrer" 
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-2xl bg-brand-blush-dark/10 flex items-center justify-center text-brand-blush-dark font-serif text-xl font-bold border border-brand-blush-dark/10 shrink-0">
+                      {selectedUmkm.brandName ? selectedUmkm.brandName.charAt(0).toUpperCase() : "B"}
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-serif text-lg font-bold text-brand-text leading-tight">{selectedUmkm.brandName || "Nama Usaha"}</h3>
                     <p className="text-[11px] text-brand-text-soft mt-0.5 font-bold uppercase tracking-wider bg-brand-bg px-2 py-0.5 rounded inline-block">
@@ -1619,14 +1504,6 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
           </div>
         )}
       </AnimatePresence>
-
-      <CustomAlert
-        isOpen={alertInfo.isOpen}
-        title={alertInfo.title}
-        message={alertInfo.message}
-        type={alertInfo.type}
-        onClose={() => setAlertInfo(prev => ({ ...prev, isOpen: false }))}
-      />
 
     </div>
   );

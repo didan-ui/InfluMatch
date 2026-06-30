@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { User, Campaign, EscrowTx, SystemLog, WithdrawalTx } from "../types";
 
 // Ambil variabel lingkungan Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://gittiyubqpdojxrcsstf.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpdHRpeXVicXBkb2p4cmNzc3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NjAyODAsImV4cCI6MjA5ODIzNjI4MH0.GuaA5ftcUbPG_jKYCGeGKWybL26UmAlSzTKeMtuUOds";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://your-supabase-project.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "your-anon-key";
 
 /**
  * Supabase Client yang siap digunakan untuk integrasi database riil.
@@ -19,32 +19,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Anda tinggal merefaktorkan pemanggilan di `src/utils.ts` atau komponen dashboard langsung ke fungsi-fungsi di bawah ini:
  */
 
-function mapDbUserToUser(item: any): User {
-  return {
-    id: item.id,
-    email: item.email,
-    password: item.password,
-    name: item.name,
-    role: item.role,
-    brandName: item.role === "umkm" ? item.brand_name : undefined,
-    brandCategory: item.role === "umkm" ? item.brand_category : undefined,
-    brandDescription: item.role === "umkm" ? item.brand_description : undefined,
-    bankName: item.role === "influencer" ? item.brand_name : undefined,
-    accountNo: item.role === "influencer" ? item.brand_category : undefined,
-    accountHolder: item.role === "influencer" ? item.brand_description : undefined,
-    handle: item.handle,
-    followers: item.followers,
-    followersNum: item.followers_num != null ? Number(item.followers_num) : undefined,
-    pricePerPost: item.price_per_post,
-    niche: item.niche,
-    city: item.city,
-    avatarUrl: item.avatar_url,
-    isApproved: !!item.is_approved,
-    engagement: item.engagement,
-    rating: item.rating != null ? Number(item.rating) : undefined
-  };
-}
-
 export const supabaseDb = {
   users: {
     // Mendapatkan semua pengguna atau filter berdasarkan kriteria
@@ -55,7 +29,7 @@ export const supabaseDb = {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return (data || []).map(mapDbUserToUser);
+      return (data || []) as unknown as User[];
     },
 
     // Cari pengguna berdasarkan ID
@@ -67,12 +41,11 @@ export const supabaseDb = {
         .single();
       
       if (error) return null;
-      return mapDbUserToUser(data);
+      return data as unknown as User;
     },
 
     // Menyimpan pengguna baru (Register)
     save: async (user: User): Promise<User> => {
-      const isInfluencer = user.role === "influencer";
       const { data, error } = await supabase
         .from("users")
         .insert([{
@@ -81,9 +54,9 @@ export const supabaseDb = {
           password: user.password,
           name: user.name,
           role: user.role,
-          brand_name: isInfluencer ? user.bankName : user.brandName,
-          brand_category: isInfluencer ? user.accountNo : user.brandCategory,
-          brand_description: isInfluencer ? user.accountHolder : user.brandDescription,
+          brand_name: user.brandName,
+          brand_category: user.brandCategory,
+          brand_description: user.brandDescription,
           handle: user.handle,
           followers: user.followers,
           followers_num: user.followersNum,
@@ -99,23 +72,16 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return mapDbUserToUser(data);
+      return data as unknown as User;
     },
 
     // Memperbarui profil pengguna
     update: async (id: string, updates: Partial<User>): Promise<User | null> => {
       const dbUpdates: any = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name;
-      
-      // Map brand fields or bank fields depending on updates
       if (updates.brandName !== undefined) dbUpdates.brand_name = updates.brandName;
       if (updates.brandCategory !== undefined) dbUpdates.brand_category = updates.brandCategory;
       if (updates.brandDescription !== undefined) dbUpdates.brand_description = updates.brandDescription;
-      
-      if (updates.bankName !== undefined) dbUpdates.brand_name = updates.bankName;
-      if (updates.accountNo !== undefined) dbUpdates.brand_category = updates.accountNo;
-      if (updates.accountHolder !== undefined) dbUpdates.brand_description = updates.accountHolder;
-
       if (updates.city !== undefined) dbUpdates.city = updates.city;
       if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
       if (updates.rating !== undefined) dbUpdates.rating = updates.rating;
@@ -135,7 +101,7 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return mapDbUserToUser(data);
+      return data as unknown as User;
     },
 
     // Menghapus pengguna
@@ -344,36 +310,21 @@ export const supabaseDb = {
         .order("date", { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(item => {
-        const parts = (item.bank_name || "").split("||");
-        const bankName = parts[0] || item.bank_name || "";
-        const umkmId = parts[1] || undefined;
-        const campaignId = parts[2] || undefined;
-        const campaignName = parts[3] || undefined;
-        const status = (parts[4] || item.status) as any;
-
-        return {
-          id: item.id,
-          influencerId: item.influencer_id,
-          influencerName: item.influencer_name,
-          amount: Number(item.amount),
-          bankName,
-          accountNo: item.account_no,
-          accountHolder: item.account_holder,
-          status,
-          date: item.date,
-          umkmId,
-          campaignId,
-          campaignName
-        };
-      });
+      return (data || []).map(item => ({
+        id: item.id,
+        influencerId: item.influencer_id,
+        influencerName: item.influencer_name,
+        amount: Number(item.amount),
+        bankName: item.bank_name,
+        accountNo: item.account_no,
+        accountHolder: item.account_holder,
+        status: item.status,
+        date: item.date
+      }));
     },
 
     // Ajukan penarikan dana baru
     save: async (w: WithdrawalTx): Promise<WithdrawalTx> => {
-      const dbStatus = w.status === "approved_by_umkm" ? "pending" : w.status;
-      const dbBankName = `${w.bankName || ""}||${w.umkmId || ""}||${w.campaignId || ""}||${w.campaignName || ""}||${w.status}`;
-
       const { data, error } = await supabase
         .from("withdrawals")
         .insert([{
@@ -381,48 +332,23 @@ export const supabaseDb = {
           influencer_id: w.influencerId,
           influencer_name: w.influencerName,
           amount: w.amount,
-          bank_name: dbBankName,
+          bank_name: w.bankName,
           account_no: w.accountNo,
           account_holder: w.accountHolder,
-          status: dbStatus,
+          status: w.status,
           date: w.date
         }])
         .select()
         .single();
 
       if (error) throw error;
-      return {
-        ...w,
-        id: data.id
-      };
+      return data as unknown as WithdrawalTx;
     },
 
     // Update status penarikan dana
     update: async (id: string, updates: Partial<WithdrawalTx>): Promise<WithdrawalTx | null> => {
-      // Dapatkan data penarikan sebelumnya terlebih dahulu untuk mempertahankan fields yang ada
-      const { data: existing, error: getError } = await supabase
-        .from("withdrawals")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (getError || !existing) return null;
-
-      const parts = (existing.bank_name || "").split("||");
-      const bankName = parts[0] || existing.bank_name || "";
-      const umkmId = parts[1] || "";
-      const campaignId = parts[2] || "";
-      const campaignName = parts[3] || "";
-      const currentStatus = parts[4] || existing.status;
-
-      const newStatus = updates.status !== undefined ? updates.status : currentStatus;
-      const dbStatus = newStatus === "approved_by_umkm" ? "pending" : newStatus;
-      const dbBankName = `${bankName}||${umkmId}||${campaignId}||${campaignName}||${newStatus}`;
-
-      const dbUpdates: any = {
-        status: dbStatus,
-        bank_name: dbBankName
-      };
+      const dbUpdates: any = {};
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
 
       const { data, error } = await supabase
         .from("withdrawals")
@@ -432,20 +358,43 @@ export const supabaseDb = {
         .single();
 
       if (error) throw error;
-      return {
-        id: data.id,
-        influencerId: data.influencer_id,
-        influencerName: data.influencer_name,
-        amount: Number(data.amount),
-        bankName,
-        accountNo: data.account_no,
-        accountHolder: data.account_holder,
-        status: newStatus as any,
-        date: data.date,
-        umkmId: umkmId || undefined,
-        campaignId: campaignId || undefined,
-        campaignName: campaignName || undefined
-      };
+      return data as unknown as WithdrawalTx;
     }
   }
 };
+
+/**
+ * Mengunggah file gambar ke Supabase Storage (bucket: avatars)
+ * Jika bucket belum ada, akan mencoba membuat bucket terlebih dahulu.
+ * Mengembalikan string URL publik dari gambar yang diunggah.
+ */
+export const uploadAvatarToSupabase = async (userId: string, file: File): Promise<string> => {
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const fileName = `${userId}-${Date.now()}.${fileExt}`;
+
+  // Coba buat bucket 'avatars' jika belum ada (abaikan jika gagal karena keterbatasan hak akses)
+  try {
+    await supabase.storage.createBucket("avatars", {
+      public: true,
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+    });
+  } catch (err) {
+    console.log("Bucket 'avatars' check/creation bypassed:", err);
+  }
+
+  const { data, error } = await supabase.storage
+    .from("avatars")
+    .upload(fileName, file, {
+      cacheControl: "3600",
+      upsert: true
+    });
+
+  if (error) throw error;
+
+  const { data: publicUrlData } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(fileName);
+
+  return publicUrlData.publicUrl;
+};
+;

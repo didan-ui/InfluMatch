@@ -1,8 +1,6 @@
 {
-  "name": "Remix: InfluMatch",
+  "name": "InfluMatch",
   "description": "Platform kolaborasi UMKM Lokal dan Influencer Mahasiswa dengan Escrow aman dan AI Brief Generator.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

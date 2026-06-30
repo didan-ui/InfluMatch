@@ -58,58 +58,52 @@ export default function RegisterPage({ onRegisterSuccess, onNavigateToLogin, onN
       return;
     }
 
-    // Build the user object for transmission to the secure server API
-    const userPayload: any = {
+    const users = getDbUsers();
+    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      setNotification({ type: 'error', text: "Email ini sudah terdaftar. Silakan gunakan email lain." });
+      return;
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    // Build the user object
+    const newUser: User = {
       id: `${role}-${Date.now()}`,
       email,
-      password, // Send raw password, server will securely hash it on the backend
+      password: hashedPassword,
       name,
       role,
       city,
-      isApproved: true,
-      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+      isApproved: true, // Auto approved for demo flow ease, but admin can inspect
+      avatarUrl: name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
     };
 
     if (role === "umkm") {
-      userPayload.brandName = brandName;
-      userPayload.brandCategory = brandCategory;
+      newUser.brandName = brandName;
+      newUser.brandCategory = brandCategory;
     } else if (role === "influencer") {
-      userPayload.handle = handle.startsWith("@") ? handle : `@${handle}`;
-      userPayload.followers = followers;
+      newUser.handle = handle.startsWith("@") ? handle : `@${handle}`;
+      newUser.followers = followers;
+      // parse followersNum
       let num = 5000;
       if (followers.includes("K")) {
         num = parseFloat(followers.replace("K", "")) * 1000;
       }
-      userPayload.followersNum = num;
-      userPayload.niche = niche;
-      userPayload.pricePerPost = pricePerPost;
-      userPayload.engagement = (4 + Math.random() * 6).toFixed(1) + "%";
-      userPayload.rating = parseFloat((4.5 + Math.random() * 0.5).toFixed(1));
+      newUser.followersNum = num;
+      newUser.niche = niche;
+      newUser.pricePerPost = pricePerPost;
+      newUser.engagement = (4 + Math.random() * 6).toFixed(1) + "%";
+      newUser.rating = parseFloat((4.5 + Math.random() * 0.5).toFixed(1));
     }
 
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload)
-      });
+    // Save in storage
+    saveDbUser(newUser);
+    addDbLog(newUser.name, "Registrasi User", `${newUser.name} melakukan registrasi untuk tipe ${role.toUpperCase()}`, role);
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setNotification({ type: 'error', text: data.error || "Gagal mendaftarkan akun." });
-        return;
-      }
-
-      await addDbLog(data.user.name, "Registrasi User (JWT)", `${data.user.name} berhasil melakukan registrasi secara aman dengan JWT sebagai ${role.toUpperCase()}`, role);
-
-      setNotification({ type: 'success', text: "Registrasi berhasil secara aman dengan JWT! Mengalihkan ke laman login..." });
-      setTimeout(() => {
-        onRegisterSuccess();
-      }, 2000);
-    } catch (err: any) {
-      console.error("Register request failed:", err);
-      setNotification({ type: 'error', text: "Gagal menghubungi server pendaftaran JWT. Pastikan server dev berjalan." });
-    }
+    setNotification({ type: 'success', text: "Registrasi berhasil! Mengalihkan ke laman login..." });
+    setTimeout(() => {
+      onRegisterSuccess();
+    }, 2000);
   };
 
   return (
