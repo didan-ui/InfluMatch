@@ -112,16 +112,16 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
       
       {/* HEADER NAVBAR WITH RICH DETAILED NAV LINKS */}
       <header className="sticky top-0 z-40 w-full bg-brand-white/90 backdrop-blur-md border-b border-brand-sand/65 shadow-xs select-none">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-row justify-between items-center gap-4">
           
           {/* Logo Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 bg-brand-sage text-brand-sage-dark rounded-2xl flex items-center justify-center font-serif text-xl font-black shadow-inner border border-brand-sage-dark/10">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-brand-sage text-brand-sage-dark rounded-xl md:rounded-2xl flex items-center justify-center font-serif text-lg md:text-xl font-black shadow-inner border border-brand-sage-dark/10 shrink-0">
               iM
             </div>
             <div className="flex flex-col">
-              <span className="font-serif text-2xl font-black tracking-tight text-brand-text leading-none">InfluMatch</span>
-              <span className="text-[9px] text-[#58816E] font-extrabold uppercase tracking-widest mt-1">Malang Synergy Portal</span>
+              <span className="font-serif text-lg md:text-2xl font-black tracking-tight text-brand-text leading-none">InfluMatch</span>
+              <span className="text-[8px] md:text-[9px] text-[#58816E] font-extrabold uppercase tracking-widest mt-0.5 md:mt-1">Malang Portal</span>
             </div>
           </div>
 
@@ -136,18 +136,18 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
             <button 
               onClick={onNavigateToLogin}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-brand-text-soft hover:text-brand-text hover:bg-brand-sand/30 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1.5 md:px-4 md:py-2 text-[10px] md:text-xs font-bold text-brand-text-soft hover:text-brand-text hover:bg-brand-sand/30 rounded-lg md:rounded-xl transition-all cursor-pointer"
             >
-              <LogIn className="w-3.5 h-3.5 text-brand-text-light" /> Masuk Akun
+              <LogIn className="w-3 md:w-3.5 h-3 md:h-3.5 text-brand-text-light" /> <span className="hidden xs:inline">Masuk</span><span className="xs:hidden">Masuk</span>
             </button>
             <button 
               onClick={onNavigateToRegister}
-              className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-black text-brand-white bg-brand-text hover:bg-brand-text/90 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1.5 md:px-5 md:py-2.5 text-[10px] md:text-xs font-black text-brand-white bg-brand-text hover:bg-brand-text/90 rounded-lg md:rounded-xl shadow-md transition-all cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              <UserPlus className="w-3.5 h-3.5" /> Gabung Sekarang
+              <UserPlus className="w-3 md:w-3.5 h-3 md:h-3.5" /> <span className="hidden xs:inline">Gabung Sekarang</span><span className="xs:hidden">Daftar</span>
             </button>
           </div>
 
@@ -155,13 +155,13 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
       </header>
 
       {/* MAIN LAYOUT */}
-      <main className="w-full max-w-7xl mx-auto px-6 py-8 flex-grow space-y-16">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8 flex-grow space-y-16">
         
         {/* SECTION 1: HERO & REGISTRATION TRIGGERS (ID: tentang) */}
         <div id="tentang" className="grid grid-cols-12 gap-6 items-stretch scroll-mt-24">
           
           {/* Main Hero Bento Block - Col 8 */}
-          <section className="col-span-12 lg:col-span-8 bg-brand-sage border border-brand-sand/80 rounded-[2.5rem] p-8 lg:p-10 relative overflow-hidden flex flex-col justify-between min-h-[380px] shadow-sm">
+          <section className="col-span-12 lg:col-span-8 bg-brand-sage border border-brand-sand/80 rounded-[2.5rem] p-6 sm:p-8 lg:p-10 relative overflow-hidden flex flex-col justify-between min-h-[380px] shadow-sm">
             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
             
             <div className="space-y-4 relative z-10">
@@ -169,7 +169,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
                 <Sparkles className="w-3 h-3 text-[#58816E] animate-pulse" /> Sinergi Usaha Lokal & Kreator Mahasiswa Malang
               </span>
               
-              <h1 className="font-serif text-[#2D2825] text-4xl lg:text-5xl font-black leading-tight tracking-tight max-w-2xl">
+              <h1 className="font-serif text-[#2D2825] text-3xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight max-w-2xl">
                 Jangkau Lebih Banyak. <br />
                 Aman 100% Lewat <span className="underline underline-offset-4 decoration-wavy decoration-[#58816E] text-brand-sage-dark">Escrow Dana</span>.
               </h1>
@@ -179,7 +179,7 @@ export default function WelcomePage({ onNavigateToLogin, onNavigateToRegister }:
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 pt-8 border-t border-brand-sand/50 mt-8 select-text">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t border-brand-sand/50 mt-8 select-text">
               <div className="space-y-1">
                 <span className="text-[9px] font-black text-brand-text-light uppercase tracking-widest block">Dana Terjamin Aman</span>
                 <p className="font-serif text-lg md:text-2xl font-extrabold text-brand-text leading-none">Rp {totalBudgetCirculated.toLocaleString()}</p>

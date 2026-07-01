@@ -569,8 +569,8 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
     <div className="flex bg-brand-bg min-h-[calc(100vh-64px)] font-sans flex-col md:flex-row">
       
       {/* SIDEBAR NAVIGATION */}
-      <aside className="w-full md:w-64 bg-brand-white border-r border-brand-sand shrink-0 py-6">
-        <div className="px-6 pb-6 border-b border-brand-sand cursor-pointer hover:bg-brand-bg/10 transition-colors">
+      <aside className="w-full md:w-64 bg-brand-white border-b md:border-b-0 md:border-r border-brand-sand shrink-0 py-4 md:py-6 flex flex-col">
+        <div className="hidden md:block px-6 pb-6 border-b border-brand-sand cursor-pointer hover:bg-brand-bg/10 transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-brand-blush rounded-2xl flex items-center justify-center font-bold text-brand-blush-dark shadow-inner text-base">
               UM
@@ -585,45 +585,47 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
           </span>
         </div>
 
-        <div className="mt-6 px-4 space-y-1">
-          <p className="px-3 text-xs tracking-widest font-bold text-brand-text-light uppercase mb-2 select-none">Menu Utama</p>
-          {[
-            { id: "dashboard", label: "Halaman Utama", icon: Sparkles },
-            { id: "campaigns", label: "Campaign", icon: Users },
-            { id: "discover", label: "Cari Influencer", icon: Search },
-            { id: "analytics", label: "Laporan Hasil", icon: BarChart3 },
-            { id: "escrow", label: "Pembayaran Aman", icon: Wallet },
-            { id: "brief", label: "Asisten Naskah AI", icon: FileText },
-            { id: "profile", label: "Profil Usaha", icon: Settings }
-          ].map(item => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id as any);
-                  forceRefresh();
-                }}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                  isActive 
-                    ? "bg-brand-blush/50 border-l-4 border-brand-blush-dark text-brand-text shadow-sm" 
-                    : "text-brand-brand-text-soft hover:bg-brand-bg/50 hover:text-brand-text"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-brand-blush-dark' : 'text-brand-text-light'}`} />
-                  <span>{item.label}</span>
-                </div>
-                {/* No badges needed for general tabs */}
-              </button>
-            );
-          })}
+        <div className="mt-2 md:mt-6 px-4">
+          <p className="hidden md:block px-3 text-xs tracking-widest font-bold text-brand-text-light uppercase mb-2 select-none">Menu Utama</p>
+          <div className="flex flex-row md:flex-col overflow-x-auto scrollbar-none pb-2 md:pb-0 gap-1.5 md:gap-1">
+            {[
+              { id: "dashboard", label: "Halaman Utama", icon: Sparkles },
+              { id: "campaigns", label: "Campaign", icon: Users },
+              { id: "discover", label: "Cari Influencer", icon: Search },
+              { id: "analytics", label: "Laporan Hasil", icon: BarChart3 },
+              { id: "escrow", label: "Pembayaran Aman", icon: Wallet },
+              { id: "brief", label: "Asisten Naskah AI", icon: FileText },
+              { id: "profile", label: "Profil Usaha", icon: Settings }
+            ].map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as any);
+                    forceRefresh();
+                  }}
+                  className={`flex items-center justify-between px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                    isActive 
+                      ? "bg-brand-blush/50 border-b-2 md:border-b-0 md:border-l-4 border-brand-blush-dark text-brand-text shadow-sm" 
+                      : "text-brand-brand-text-soft hover:bg-brand-bg/50 hover:text-brand-text"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Icon className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 ${isActive ? 'text-brand-blush-dark' : 'text-brand-text-light'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  {/* No badges needed for general tabs */}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </aside>
 
       {/* DASHBOARD CONTENT BODY */}
-      <main className="flex-1 p-6 lg:p-10 max-w-7xl">
+      <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl overflow-hidden">
         
         {/* TAB 1: DASHBOARD OVERVIEW */}
         {activeTab === "dashboard" && (

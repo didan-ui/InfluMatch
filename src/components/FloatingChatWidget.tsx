@@ -187,7 +187,7 @@ export default function FloatingChatWidget({ currentUser }: FloatingChatWidgetPr
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-[370px] sm:w-[400px] h-[550px] bg-brand-white border border-brand-sand rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-50 font-sans text-brand-text"
+            className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[400px] h-[500px] sm:h-[550px] bg-brand-white border border-brand-sand rounded-3xl sm:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden z-50 font-sans text-brand-text"
           >
             {/* Widget Header */}
             <div className="px-5 py-4 bg-brand-bg/60 border-b border-brand-sand/50 flex items-center justify-between">

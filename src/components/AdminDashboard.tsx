@@ -207,8 +207,8 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     <div className="flex bg-brand-bg min-h-[calc(100vh-64px)] font-sans flex-col md:flex-row">
       
       {/* ADMIN CONTROL PANEL NAVIGATION */}
-      <aside className="w-full md:w-64 bg-brand-white border-r border-brand-sand shrink-0 py-6">
-        <div className="px-6 pb-6 border-b border-brand-sand">
+      <aside className="w-full md:w-64 bg-brand-white border-b md:border-b-0 md:border-r border-brand-sand shrink-0 py-4 md:py-6 flex flex-col">
+        <div className="hidden md:block px-6 pb-6 border-b border-brand-sand">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center font-bold text-red-700 shadow-inner text-base">
               AD
@@ -223,47 +223,49 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
           </span>
         </div>
 
-        <div className="mt-6 px-4 space-y-1">
-          <p className="px-3 text-xs tracking-widest font-bold text-brand-text-light uppercase mb-2 select-none font-sans">Menu Kontrol</p>
-          {[
-            { id: "users", label: "Kelola Pendaftar", icon: Users, badge: pendingApprovals.length },
-            { id: "reports", label: "Kelola Laporan", icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
-            { id: "campaigns", label: "Pantau Kampanye", icon: FileText },
-            { id: "escrows", label: "Verifikasi Pembayaran", icon: Wallet },
-            { id: "logs", label: "Catatan Aktivitas", icon: ClipboardList }
-          ].map(subTab => {
-            const Icon = subTab.icon;
-            const isSubActive = activeSubTab === subTab.id;
-            return (
-              <button
-                key={subTab.id}
-                onClick={() => {
-                  setActiveSubTab(subTab.id as any);
-                  forceRefresh();
-                }}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                  isSubActive 
-                    ? "bg-red-50 border-l-4 border-red-600 text-brand-text shadow-sm" 
-                    : "text-brand-text-soft hover:bg-brand-bg/50 hover:text-brand-text"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 shrink-0 ${isSubActive ? 'text-red-650' : 'text-brand-text-light'}`} />
-                  <span>{subTab.label}</span>
-                </div>
-                {subTab.badge !== undefined && subTab.badge > 0 && (
-                  <span className="bg-red-600 text-brand-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full select-none ml-2">
-                    {subTab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div className="mt-2 md:mt-6 px-4">
+          <p className="hidden md:block px-3 text-xs tracking-widest font-bold text-brand-text-light uppercase mb-2 select-none font-sans">Menu Kontrol</p>
+          <div className="flex flex-row md:flex-col overflow-x-auto scrollbar-none pb-2 md:pb-0 gap-1.5 md:gap-1">
+            {[
+              { id: "users", label: "Kelola Pendaftar", icon: Users, badge: pendingApprovals.length },
+              { id: "reports", label: "Kelola Laporan", icon: ShieldAlert, badge: reports.filter(r => r.status === 'pending').length },
+              { id: "campaigns", label: "Pantau Kampanye", icon: FileText },
+              { id: "escrows", label: "Verifikasi Pembayaran", icon: Wallet },
+              { id: "logs", label: "Catatan Aktivitas", icon: ClipboardList }
+            ].map(subTab => {
+              const Icon = subTab.icon;
+              const isSubActive = activeSubTab === subTab.id;
+              return (
+                <button
+                  key={subTab.id}
+                  onClick={() => {
+                    setActiveSubTab(subTab.id as any);
+                    forceRefresh();
+                  }}
+                  className={`flex items-center justify-between px-3 md:px-4 py-2 md:py-3 rounded-xl md:rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap gap-2 ${
+                    isSubActive 
+                      ? "bg-red-50 border-b-2 md:border-b-0 md:border-l-4 border-red-600 text-brand-text shadow-sm" 
+                      : "text-brand-text-soft hover:bg-brand-bg/50 hover:text-brand-text"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Icon className={`w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 ${isSubActive ? 'text-red-650' : 'text-brand-text-light'}`} />
+                    <span>{subTab.label}</span>
+                  </div>
+                  {subTab.badge !== undefined && subTab.badge > 0 && (
+                    <span className="bg-red-600 text-brand-white text-[9px] font-mono font-bold px-1.5 md:px-2 py-0.5 rounded-full select-none ml-1.5">
+                      {subTab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </aside>
 
       {/* ADMIN CONTENT BODY */}
-      <main className="flex-1 p-6 lg:p-10 max-w-7xl space-y-6">
+      <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl overflow-hidden space-y-6">
         
         {/* Bento Grid Header Layout */}
         <div className="grid grid-cols-12 gap-5">
