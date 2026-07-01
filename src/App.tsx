@@ -9,6 +9,7 @@ import Topbar from "./components/Topbar";
 import UmkmDashboard from "./components/UmkmDashboard";
 import InfluencerDashboard from "./components/InfluencerDashboard";
 import AdminDashboard from "./components/AdminDashboard";
+import FloatingChatWidget from "./components/FloatingChatWidget";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
@@ -248,6 +249,7 @@ export default function App() {
                   </div>
                 )}
               </div>
+              <FloatingChatWidget currentUser={currentUser} />
             </motion.div>
           );
         })()}

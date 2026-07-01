@@ -24,7 +24,7 @@ interface UmkmDashboardProps {
 }
 
 export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "discover" | "campaigns" | "brief" | "escrow" | "analytics" | "profile" | "chat">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "discover" | "campaigns" | "brief" | "escrow" | "analytics" | "profile">("dashboard");
   
   // Chat state variables
   const [selectedChatCampaignId, setSelectedChatCampaignId] = useState<string | null>(null);
@@ -591,7 +591,6 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
             { id: "dashboard", label: "Halaman Utama", icon: Sparkles },
             { id: "campaigns", label: "Campaign", icon: Users },
             { id: "discover", label: "Cari Influencer", icon: Search },
-            { id: "chat", label: "Diskusi Chat", icon: MessageSquare, badge: db.chats.unreadCount(currentUser.id) },
             { id: "analytics", label: "Laporan Hasil", icon: BarChart3 },
             { id: "escrow", label: "Pembayaran Aman", icon: Wallet },
             { id: "brief", label: "Asisten Naskah AI", icon: FileText },
@@ -616,11 +615,7 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                   <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-brand-blush-dark' : 'text-brand-text-light'}`} />
                   <span>{item.label}</span>
                 </div>
-                {!!item.badge && (
-                  <span className="bg-red-500 text-brand-white text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold">
-                    {item.badge}
-                  </span>
-                )}
+                {/* No badges needed for general tabs */}
               </button>
             );
           })}
@@ -1003,10 +998,15 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => {
-                                      setSelectedChatCampaignId(camp.id);
-                                      setSelectedChatPartnerId(col.influencerId);
-                                      setSelectedChatPartnerName(col.influencerName);
-                                      setActiveTab("chat");
+                                      window.dispatchEvent(
+                                        new CustomEvent("open-chat-thread", {
+                                          detail: {
+                                            campaignId: camp.id,
+                                            partnerId: col.influencerId,
+                                            partnerName: col.influencerName
+                                          }
+                                        })
+                                      );
                                     }}
                                     className="px-3.5 py-1.5 rounded-xl bg-brand-blush text-brand-blush-dark hover:bg-brand-blush/80 font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 shrink-0"
                                   >
@@ -1814,231 +1814,6 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
           </motion.div>
         )}
 
-        {/* TAB 7: REAL-TIME CHAT & DISCUSSIONS */}
-        {activeTab === "chat" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[calc(100vh-140px)] flex flex-col bg-brand-white border border-brand-sand rounded-[2rem] overflow-hidden shadow-sm select-text text-brand-text">
-            <div className="flex-1 flex divide-x divide-brand-sand/50 overflow-hidden">
-              
-              {/* Left Column: Chat Matches (Sidebar) */}
-              <div className="w-1/3 flex flex-col bg-brand-bg/25 overflow-y-auto">
-                <div className="p-4 border-b border-brand-sand/50">
-                  <h3 className="font-serif text-lg font-bold">Daftar Obrolan</h3>
-                  <p className="text-[10px] text-brand-text-soft mt-0.5">Partner kolaborasi aktif dari campaign Anda</p>
-                </div>
-                
-                <div className="flex-1 divide-y divide-brand-sand/30">
-                  {(() => {
-                    const matches = campaigns.flatMap(camp => {
-                      return camp.influencers
-                        .filter(inf => inf.status !== "applied" && inf.status !== "invited")
-                        .map(inf => {
-                          const influencerDetail = getDbUsers().find(u => u.id === inf.influencerId);
-                          const unreads = db.chats.list().filter(m => m.campaignId === camp.id && m.senderId === inf.influencerId && !m.read).length;
-                          const campaignChats = db.chats.list().filter(m => m.campaignId === camp.id);
-                          const latestMsg = campaignChats.length > 0 ? campaignChats[campaignChats.length - 1] : null;
-                          
-                          return {
-                            campaignId: camp.id,
-                            campaignName: camp.name,
-                            partnerId: inf.influencerId,
-                            partnerName: inf.influencerName,
-                            partnerAvatar: influencerDetail?.avatarUrl,
-                            partnerHandle: influencerDetail?.handle || "@kreator_lokal",
-                            unreads,
-                            latestMsg
-                          };
-                        });
-                    });
-
-                    const sortedMatches = [...matches].sort((a, b) => {
-                      const timeA = a.latestMsg ? new Date(a.latestMsg.timestamp).getTime() : 0;
-                      const timeB = b.latestMsg ? new Date(b.latestMsg.timestamp).getTime() : 0;
-                      return timeB - timeA;
-                    });
-
-                    if (sortedMatches.length === 0) {
-                      return (
-                        <div className="p-8 text-center text-xs text-brand-text-light font-medium leading-relaxed">
-                          Tidak ada partner kolaborasi aktif.<br/>
-                          <span className="text-[10px] text-brand-text-soft mt-1 block">Silakan setujui pengajuan influencer di tab "Campaign" terlebih dahulu.</span>
-                        </div>
-                      );
-                    }
-
-                    return sortedMatches.map((m) => {
-                      const isActiveThread = selectedChatCampaignId === m.campaignId && selectedChatPartnerId === m.partnerId;
-                      return (
-                        <div
-                          key={`${m.campaignId}-${m.partnerId}`}
-                          onClick={() => {
-                            setSelectedChatCampaignId(m.campaignId);
-                            setSelectedChatPartnerId(m.partnerId);
-                            setSelectedChatPartnerName(m.partnerName);
-                            db.chats.markAsRead(m.campaignId, currentUser.id);
-                          }}
-                          className={`p-4 cursor-pointer hover:bg-brand-blush/10 transition-colors flex items-center justify-between gap-3 ${
-                            isActiveThread ? "bg-brand-blush/30" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            {m.partnerAvatar && (m.partnerAvatar.startsWith("http") || m.partnerAvatar.startsWith("/") || m.partnerAvatar.startsWith("data:")) ? (
-                              <img src={m.partnerAvatar} alt={m.partnerName} className="w-10 h-10 rounded-full object-cover border border-brand-sand shrink-0" referrerPolicy="no-referrer" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-brand-blush text-brand-blush-dark font-bold text-xs flex items-center justify-center shrink-0">
-                                {m.partnerName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="overflow-hidden">
-                              <div className="flex items-center gap-1.5">
-                                <h4 className="text-xs font-bold truncate leading-none">{m.partnerName}</h4>
-                                <span className="text-[9px] text-brand-text-light font-mono truncate leading-none">{m.partnerHandle}</span>
-                              </div>
-                              <p className="text-[10px] text-brand-text-soft truncate font-serif font-semibold mt-1 leading-none">Campaign: {m.campaignName}</p>
-                              <p className="text-[10px] text-brand-text-light truncate mt-1 max-w-[150px]">
-                                {m.latestMsg ? `${m.latestMsg.senderId === currentUser.id ? "Anda" : m.partnerName}: ${m.latestMsg.message}` : "Belum ada pesan."}
-                              </p>
-                            </div>
-                          </div>
-
-                          {m.unreads > 0 && (
-                            <span className="bg-red-500 text-brand-white text-[9px] font-mono px-1.5 py-0.5 rounded-full font-bold shrink-0">
-                              {m.unreads}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-              {/* Right Column: Chat Window */}
-              <div className="flex-1 flex flex-col bg-brand-white h-full relative overflow-hidden">
-                {selectedChatCampaignId && selectedChatPartnerId ? (
-                  <>
-                    {/* Active Chat Header */}
-                    <div className="p-4 border-b border-brand-sand/50 bg-brand-bg/10 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <h4 className="text-xs font-black tracking-wider uppercase text-brand-text-light leading-none">Chat Bersama</h4>
-                          <span className="font-serif text-base font-bold text-brand-text block mt-1">{selectedChatPartnerName}</span>
-                          <span className="text-[10px] bg-brand-sage text-brand-sage-dark font-bold px-2 py-0.5 rounded-md mt-1.5 inline-block">
-                            Program: {campaigns.find(c => c.id === selectedChatCampaignId)?.name || "Campaign Aktif"}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          handleViewInfluencerProfile(selectedChatPartnerId);
-                        }}
-                        className="px-3 py-1.5 bg-brand-white border border-brand-sand rounded-xl text-[10px] font-bold text-brand-text-soft hover:bg-brand-bg transition-colors"
-                      >
-                        Lihat Profil Kreator
-                      </button>
-                    </div>
-
-                    {/* Chat Messages Body */}
-                    <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#FCFAF7]/40 flex flex-col">
-                      {chatMessages.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-brand-text-soft space-y-2">
-                          <span className="text-2xl">💬</span>
-                          <p className="text-xs font-semibold">Memulai Diskusi Kerjasama</p>
-                          <p className="text-[10px] text-brand-text-light max-w-xs">Diskusikan pengiriman brief, draf konten, jadwal posting, dan detail penawaran secara ramah dan profesional.</p>
-                        </div>
-                      ) : (
-                        chatMessages.map((msg) => {
-                          const isMe = msg.senderId === currentUser.id;
-                          return (
-                            <div
-                              key={msg.id}
-                              className={`flex flex-col max-w-[75%] ${
-                                isMe ? "self-end items-end" : "self-start items-start"
-                              }`}
-                            >
-                              <div className="text-[9px] text-brand-text-light font-bold mb-1 px-1">
-                                {isMe ? "Anda" : selectedChatPartnerName}
-                              </div>
-                              <div
-                                className={`p-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
-                                  isMe
-                                    ? "bg-brand-text text-brand-white rounded-tr-none"
-                                    : "bg-brand-bg border border-brand-sand/50 text-brand-text rounded-tl-none"
-                                }`}
-                              >
-                                {msg.message}
-                              </div>
-                              <div className="text-[8px] text-brand-text-light font-mono mt-1 px-1 flex items-center gap-1">
-                                {new Date(msg.timestamp).toLocaleTimeString("id-ID", {
-                                  hour: "2-digit",
-                                  minute: "2-digit"
-                                })}
-                                {isMe && (
-                                  <span className="text-brand-sage-dark font-sans font-bold">
-                                    {msg.read ? "✓✓ Terbaca" : "✓ Terkirim"}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {/* Chat Input Bar */}
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (!newMessageText.trim()) return;
-                        
-                        const newMsg = {
-                          id: "msg-" + Date.now(),
-                          campaignId: selectedChatCampaignId,
-                          senderId: currentUser.id,
-                          receiverId: selectedChatPartnerId,
-                          message: newMessageText,
-                          read: false,
-                          timestamp: new Date().toISOString()
-                        };
-                        
-                        db.chats.save(newMsg);
-                        setChatMessages(prev => [...prev, newMsg]);
-                        setNewMessageText("");
-                        forceRefresh();
-                      }}
-                      className="p-4 border-t border-brand-sand/50 bg-brand-white flex gap-2 items-center"
-                    >
-                      <input
-                        type="text"
-                        value={newMessageText}
-                        onChange={(e) => setNewMessageText(e.target.value)}
-                        placeholder={`Tulis pesan Anda ke ${selectedChatPartnerName}...`}
-                        className="flex-1 border border-brand-sand bg-brand-bg/30 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-brand-text text-brand-text"
-                      />
-                      <button
-                        type="submit"
-                        className="px-5 py-3 rounded-2xl bg-brand-text text-brand-white text-xs font-bold hover:opacity-95 active:scale-95 transition-all flex items-center gap-1.5 shadow-md cursor-pointer shrink-0"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Kirim</span>
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-brand-text-soft bg-brand-bg/10">
-                    <div className="w-16 h-16 rounded-full bg-brand-blush/30 flex items-center justify-center text-2xl mb-4 animate-bounce">
-                      💬
-                    </div>
-                    <h3 className="font-serif text-lg font-bold text-brand-text">Pusat Hubungan Chat</h3>
-                    <p className="text-xs text-brand-text-soft max-w-sm mt-1.5 leading-relaxed">
-                      Silakan pilih salah satu daftar obrolan aktif di panel kiri untuk bertukar naskah, file pendukung, brief, dan koordinasi postingan.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </motion.div>
-        )}
 
       </main>
 

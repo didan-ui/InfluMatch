@@ -22,7 +22,7 @@ interface InfluencerDashboardProps {
 }
 
 export default function InfluencerDashboard({ currentUser, onUserUpdate }: InfluencerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"discover" | "invites" | "active" | "escrow" | "settings" | "chat">("discover");
+  const [activeTab, setActiveTab] = useState<"discover" | "invites" | "active" | "escrow" | "settings">("discover");
   
   // Chat state variables
   const [selectedChatCampaignId, setSelectedChatCampaignId] = useState<string | null>(null);
@@ -436,7 +436,6 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
             { id: "discover", label: "Tawaran UMKM (Cari Kerja)", icon: Search },
             { id: "invites", label: "Undangan Kerjasama", icon: Inbox, badge: incomingInvites.length },
             { id: "active", label: "Tugas Berjalan", icon: FileText, badge: activeCamps.length },
-            { id: "chat", label: "Diskusi Chat", icon: MessageSquare, badge: db.chats.unreadCount(currentUser.id) },
             { id: "escrow", label: "Dompet Saya", icon: Wallet },
             { id: "settings", label: "Atur Profil", icon: Settings }
           ].map(item => {
@@ -789,10 +788,15 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
                           </button>
                           <button 
                             onClick={() => {
-                              setSelectedChatCampaignId(camp.id);
-                              setSelectedChatPartnerId(camp.umkmId);
-                              setSelectedChatPartnerName(camp.umkmName);
-                              setActiveTab("chat");
+                              window.dispatchEvent(
+                                new CustomEvent("open-chat-thread", {
+                                  detail: {
+                                    campaignId: camp.id,
+                                    partnerId: camp.umkmId,
+                                    partnerName: camp.umkmName
+                                  }
+                                })
+                              );
                             }}
                             className="text-[10px] text-brand-sage-dark hover:underline font-bold cursor-pointer inline-flex items-center gap-0.5"
                           >
@@ -1461,7 +1465,7 @@ export default function InfluencerDashboard({ currentUser, onUserUpdate }: Influ
         )}
 
         {/* TAB 6: REAL-TIME CHAT & DISCUSSIONS */}
-        {activeTab === "chat" && (
+        {activeTab === "chat" && false && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[calc(100vh-140px)] flex flex-col bg-brand-white border border-brand-sand rounded-[2rem] overflow-hidden shadow-sm select-text text-brand-text">
             <div className="flex-1 flex divide-x divide-brand-sand/50 overflow-hidden">
               
