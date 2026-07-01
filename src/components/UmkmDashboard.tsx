@@ -712,38 +712,7 @@ export default function UmkmDashboard({ currentUser, onUserUpdate }: UmkmDashboa
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-              {/* Recent Activity Logs */}
-              <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-serif text-xl font-bold text-brand-text">Akivitas Terbaru</h3>
-                  <button onClick={forceRefresh} className="text-xs text-brand-text-light hover:text-brand-text flex items-center gap-1 font-bold">
-                    <RefreshCw className="w-3 h-3 hover:rotate-180 transition-transform duration-500" /> Segarkan
-                  </button>
-                </div>
-                
-                <div className="divide-y divide-brand-sand/50">
-                  {logs.slice(0, 4).map((log) => (
-                    <div key={log.id} className="py-3.5 flex items-start gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-brand-sage-dark shrink-0 mt-1.5" />
-                      <div>
-                        <p className="text-xs text-brand-text-soft">
-                          <span className="font-bold text-brand-text">{log.actor}</span>: {log.details}
-                        </p>
-                        <span className="text-[10px] text-brand-text-light font-mono block mt-0.5">
-                          {new Date(log.date).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {logs.length === 0 && (
-                    <div className="py-8 text-center text-xs text-brand-text-light">
-                      Belum ada log aktivitas kampanye.
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 gap-6">
 
               {/* Direct Quick Campaign Dashboard view with Manage Button */}
               <div className="bg-brand-white border border-brand-sand rounded-3xl p-6 shadow-sm space-y-4">
